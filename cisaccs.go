@@ -41,7 +41,10 @@ func (a *CisAccount) OneCisExecuteSsh(host string, cmds []string) error {
 	}
 
 	var cnd namedevs.CiscoNameDevs
-	hstData := cnd.GetByHostName(a.cisFileName, host)
+	hstData, err := cnd.GetByHostName(a.cisFileName, host)
+	if err != nil {
+		return err
+	}
 	hstAccount, found := hostdata.GetHostAccountByGroupName(a.pwdFileName, hstData.Group)
 	if !found {
 		return errors.New("not found account")
