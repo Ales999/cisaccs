@@ -1,0 +1,12 @@
+{
+    "spb": {
+        "username": "userynb",
+        "password": "ciscoynb",
+        "secret": "secretynb"
+    },
+    "was":{
+        "username": "userwas",
+        "password": "ciscowas",
+        "secret": "secretwas"
+    }
+}

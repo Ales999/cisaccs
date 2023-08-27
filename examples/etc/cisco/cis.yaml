@@ -1,0 +1,19 @@
+gns3-r1:
+  device_type: cisco_ios
+  group: ynb
+  host: 192.168.1.11
+gns3-r2:
+  device_type: cisco_ios
+  group: ynb
+  host: 192.168.1.12
+eve-cis:
+  device_type: cisco_ios
+  group: was
+  host: 192.168.1.14
+supermax:
+  device_type: cisco_ios
+  group: was
+  host: 20.20.20.1
+  hoost_e: 172.17.24.1
+  hoost_t1: 172.16.43.2
+  hoost_t2: 172.17.43.2
