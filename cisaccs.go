@@ -53,7 +53,7 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) erro
 	fmt.Printf("hstAccount: %v\n", hstAccount)
 
 	// Настройка и подключение.
-	device, err := netrasp.New(host,
+	device, err := netrasp.New(hstData.HostIp,
 		netrasp.WithDriver("ios"),
 		netrasp.WithSSHPort(port),
 		netrasp.WithUsernamePasswordEnableSecret(hstAccount.Username, hstAccount.Password, hstAccount.Secret),
