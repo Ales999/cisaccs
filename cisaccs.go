@@ -53,7 +53,7 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 
 	// Debug print account info
 	// fmt.Printf("hstAccount: %v\n", hstAccount)
-	fmt.Printf("Connect to %s (%v):\n", host, hstData.HostIp)
+	fmt.Printf("Connect to host: %s (%v)\n", host, hstData.HostIp)
 
 	// Настройка и подключение.
 	device, err := netrasp.New(hstData.HostIp,
@@ -64,17 +64,25 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 	if err != nil {
 		return outs, fmt.Errorf("unable to init config: %v", err)
 	}
-	// ctx, cancelOpen := context.WithTimeoutCause(context.Background(), 30*time.Second, fmt.Errorf("open session timeout")) // .WithTimeout(context.Background(), 10*time.Second)
-	ctx, cancelOpen := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancelOpen()
 
-	err = device.Dial(ctx)
+	// ctx, cancelOpen := context.WithTimeoutCause(context.Background(), 30*time.Second, fmt.Errorf("open session timeout")) // .WithTimeout(context.Background(), 10*time.Second)
+	fmt.Println("Create Context")
+	ctx := context.Background()
+
+	ctxWithCancel, cancelOpen := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer func() {
+		fmt.Println("Main Context complete")
+		cancelOpen()
+	}()
+	// defer cancelOpen()
+
+	err = device.Dial(ctxWithCancel)
 	if err != nil {
 		return outs, fmt.Errorf("unable to connect: %v", err)
 	}
 	defer device.Close(context.Background())
 
-	ctx, cancelEnable := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancelEnable := context.WithTimeout(ctxWithCancel, 3*time.Second)
 	defer cancelEnable()
 
 	err = device.Enable(ctx)
@@ -82,7 +90,7 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 		return outs, fmt.Errorf("unable to Enable command: %v", err)
 	}
 
-	ctx, cancelRun := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancelRun := context.WithTimeout(ctxWithCancel, 60*time.Second)
 	defer cancelRun()
 
 	fmt.Println("--------------------------------------------------")
