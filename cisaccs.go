@@ -53,7 +53,7 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 
 	// Debug print account info
 	// fmt.Printf("hstAccount: %v\n", hstAccount)
-	fmt.Printf("Connect to %s (%v)\n", host, hstData.HostIp)
+	fmt.Printf("Connect to %s (%v):\n", host, hstData.HostIp)
 
 	// Настройка и подключение.
 	device, err := netrasp.New(hstData.HostIp,
@@ -64,7 +64,8 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 	if err != nil {
 		return outs, fmt.Errorf("unable to init config: %v", err)
 	}
-	ctx, cancelOpen := context.WithTimeoutCause(context.Background(), 30*time.Second, fmt.Errorf("open session timeout")) // .WithTimeout(context.Background(), 10*time.Second)
+	// ctx, cancelOpen := context.WithTimeoutCause(context.Background(), 30*time.Second, fmt.Errorf("open session timeout")) // .WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancelOpen := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancelOpen()
 
 	err = device.Dial(ctx)
