@@ -17,10 +17,8 @@ import (
 func main() {
 
  portSsh : = 22
-    cisFileName := "/etc/cisco/cis.yaml"
-    pwdFileName := "/etc/cisco/passw.json"
-
-
+ cisFileName := "/etc/cisco/cis.yaml"
+ pwdFileName := "/etc/cisco/passw.json"
 
  acc := cisaccs.NewCisAccount(cisFileName, pwdFileName)
  err := acc.OneCisExecuteSsh("gns3-r2", portSsh, []string{"sh arp"})
@@ -31,6 +29,5 @@ func main() {
 }
 ```
 
-
-PS Using github.com/mrzack99s/netrasp library with Apache 2.0 license
+PS Using modifed version [netrasp](https://github.com/mrzack99s/netrasp) library with Apache 2.0 license.
 
