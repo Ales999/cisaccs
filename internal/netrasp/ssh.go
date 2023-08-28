@@ -19,6 +19,11 @@ type sshConnection struct {
 
 // Dial opens an SSH connection.
 func (s *sshConnection) Dial(ctx context.Context) error {
+
+	// Older cisco not using new crypto
+	s.Config.MACs = append(s.Config.MACs, []string{"hmac-sha2-256", "hmac-sha2-512"}...)
+	s.Config.Ciphers = append(s.Config.Ciphers, []string{"aes128-ctr", "aes192-ctr", "aes256-ctr"}...)
+
 	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", s.Host.Address, s.Host.Port), s.Config)
 	if err != nil {
 		return fmt.Errorf("unable to establish connection: %w", err)
