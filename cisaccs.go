@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/ales999/cisaccs/internal/hostdata"
@@ -33,20 +32,23 @@ func NewCisAccount(cisFileName string, pwdFileName string) *CisAccount {
 	}
 }
 
-func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) error {
+func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]string, error) {
+
+	var outs []string // результат работы выполнения на cisco
+
 	// Проверка на корректность
 	if !a.initated {
-		return errors.New("create this struct by New command")
+		return outs, errors.New("create this struct by New command")
 	}
 
 	var cnd namedevs.CiscoNameDevs
 	hstData, err := cnd.GetByHostName(a.cisFileName, host)
 	if err != nil {
-		return err
+		return outs, err
 	}
 	hstAccount, found := hostdata.GetHostAccountByGroupName(a.pwdFileName, hstData.Group)
 	if !found {
-		return errors.New("not found account")
+		return outs, errors.New("not found account")
 	}
 
 	// Debug print account info
@@ -59,7 +61,7 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) erro
 		netrasp.WithUsernamePasswordEnableSecret(hstAccount.Username, hstAccount.Password, hstAccount.Secret),
 	)
 	if err != nil {
-		return fmt.Errorf("unable to init config: %v", err)
+		return outs, fmt.Errorf("unable to init config: %v", err)
 	}
 	ctx, cancelOpen := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelOpen()
@@ -67,7 +69,7 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) erro
 	err = device.Dial(ctx)
 	if err != nil {
 		//fmt.Printf("unable to connect: %v\n", err)
-		return fmt.Errorf("unable to connect: %v", err)
+		return outs, fmt.Errorf("unable to connect: %v", err)
 	}
 	defer device.Close(context.Background())
 
@@ -76,7 +78,7 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) erro
 
 	err = device.Enable(ctx)
 	if err != nil {
-		return fmt.Errorf("unable to Enable command: %v", err)
+		return outs, fmt.Errorf("unable to Enable command: %v", err)
 	}
 
 	ctx, cancelRun := context.WithTimeout(context.Background(), 60*time.Second)
@@ -89,30 +91,39 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) erro
 			fmt.Printf("unable to run command: %v\n", err)
 			continue
 		}
-		fmt.Print(output)
+		outs = append(outs, output)
 	}
 	device.Close(ctx)
 
-	return nil
+	return outs, nil
 }
 
-func (a *CisAccount) MultiCisExecuteSsh(hosts []string, port int, cmds []string) error {
+func (a *CisAccount) MultiCisExecuteSsh(hosts []string, port int, cmds []string) ([]string, error) {
+	var outs []string
 	//
 	if !a.initated {
-		return errors.New("create this struct by New command")
+		return outs, errors.New("create this struct by New command")
 	}
 	if (port <= 0) || (port > 65534) {
-		return errors.New("ssh number port need > 0 and < 65534")
+		return outs, errors.New("ssh number port need > 0 and < 65534")
 	}
 
 	// Перебираем указанные хосты.
 	for _, host := range hosts {
-		a.OneCisExecuteSsh(host, port, cmds)
+		rets, err := a.OneCisExecuteSsh(host, port, cmds)
+		if err != nil {
+			fmt.Println(err)
+		}
+		for _, ret := range rets {
+			outs = append(outs, ret)
+		}
+
 	}
 
-	return nil
+	return outs, nil
 }
 
+/*
 // test using internal using
 func (a *CisAccount) Testme(hostIp string, port string, userName string, userPassword string) {
 
@@ -134,3 +145,4 @@ func (a *CisAccount) Testme(hostIp string, port string, userName string, userPas
 	fmt.Println(device)
 
 }
+*/
