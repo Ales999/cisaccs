@@ -9,6 +9,7 @@ import (
 	"github.com/ales999/cisaccs/internal/hostdata"
 	"github.com/ales999/cisaccs/internal/namedevs"
 	"github.com/ales999/cisaccs/internal/netrasp"
+	"github.com/ales999/cisaccs/internal/utils"
 )
 
 // temp struct
@@ -91,7 +92,7 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 			fmt.Printf("unable to run command: %v\n", err)
 			continue
 		}
-		mulouts := ConvMultiStrToArrayStr(output)
+		mulouts := utils.ConvMultiStrToArrayStr(output)
 		outs = append(outs, mulouts...)
 	}
 	device.Close(ctx)

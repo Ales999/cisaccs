@@ -1,4 +1,4 @@
-package cisaccs
+package utils
 
 import (
 	"bufio"
