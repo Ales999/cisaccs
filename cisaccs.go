@@ -91,7 +91,8 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 			fmt.Printf("unable to run command: %v\n", err)
 			continue
 		}
-		outs = append(outs, output)
+		mulouts := ConvMultiStrToArrayStr(output)
+		outs = append(outs, mulouts...)
 	}
 	device.Close(ctx)
 
