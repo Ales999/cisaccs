@@ -2,6 +2,7 @@ package namedevs
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
@@ -46,5 +47,18 @@ func (c *CiscoNameDevs) GetByHostName(cisFileName string, hostName string) (*Cis
 	//}
 
 	return &ciscoNameDevs[0], nil
+
+}
+
+func (c *CiscoNameDevs) GetHostsByGroupName(grpName string) []string {
+
+	var ret []string
+
+	for _, dev := range *c {
+		if strings.EqualFold(dev.Group, grpName) {
+			ret = append(ret, dev.NameDev)
+		}
+	}
+	return ret
 
 }
