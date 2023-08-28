@@ -19,11 +19,11 @@ type CiscoNameDev struct {
 }
 
 // newCiscoNameDev  - вернуть ссылку на новый экземпляр структуры
-func newCiscoNameDev(NameDev string, Group string, HostIp string) *CiscoNameDev {
+func newCiscoNameDev(namedev string, group string, hostip string) *CiscoNameDev {
 	return &CiscoNameDev{
-		NameDev: NameDev,
-		Group:   Group,
-		HostIp:  HostIp,
+		NameDev: namedev,
+		Group:   group,
+		HostIp:  hostip,
 	}
 }
 
@@ -31,7 +31,7 @@ type CiscoNameDevs []CiscoNameDev
 
 func (c *CiscoNameDevs) GetByHostName(cisFileName string, hostName string) (*CiscoNameDev, error) {
 
-	//var kcis *koanf.Koanf // Конфигурация для Cisco (cis.yaml)
+	// var kcis *koanf.Koanf // Конфигурация для Cisco (cis.yaml)
 	kcis := koanf.New(".")
 
 	if err := kcis.Load(file.Provider(cisFileName), yaml.Parser()); err != nil {
@@ -40,7 +40,7 @@ func (c *CiscoNameDevs) GetByHostName(cisFileName string, hostName string) (*Cis
 
 	var ciscoNameDevs []CiscoNameDev
 
-	//for _, dev := range confDevs {
+	// for _, dev := range confDevs {
 	dev := hostName
 	var cnd = newCiscoNameDev(dev, kcis.String(dev+".group"), kcis.String(dev+".host"))
 	ciscoNameDevs = append(ciscoNameDevs, *cnd)

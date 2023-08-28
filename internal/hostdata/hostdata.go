@@ -28,7 +28,7 @@ func GetHostAccountByGroupName(fileName string, groupName string) (result HostDa
 
 func GetHostAccount(fileName string) (map[string]HostData, error) {
 
-	//var hostDataMap map[string]HostData // Данные по всем группам и соответствиям ИмяГруппы => Явки/Пароли по ней
+	// var hostDataMap map[string]HostData // Данные по всем группам и соответствиям ИмяГруппы => Явки/Пароли по ней
 
 	// Данные по всем группам и соответствиям ИмяГруппы => Явки/Пароли по ней
 	hostDataMap := make(map[string]HostData) // Данные по всем группам и соответствиям ИмяГруппы => Явки/Пароли по ней
@@ -68,7 +68,7 @@ func GetHostAccount(fileName string) (map[string]HostData, error) {
 			return nil, err
 		}
 		hostDataMap[key] = hd
-		//out = append(out, hd)
+		// out = append(out, hd)
 	}
 
 	return hostDataMap, nil
