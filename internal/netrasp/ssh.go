@@ -24,6 +24,11 @@ func (s *sshConnection) Dial(ctx context.Context) error {
 	s.Config.MACs = append(s.Config.MACs, []string{"hmac-sha2-256", "hmac-sha2-512"}...)
 	//s.Config.Ciphers = append(s.Config.Ciphers, []string{"aes128-ctr", "aes192-ctr", "aes256-ctr"}...)
 	s.Config.Ciphers = append(s.Config.Ciphers, []string{"aes128-cbc", "aes192-cbc", "aes256-cbc"}...)
+	s.Config.KeyExchanges = append(
+		s.Config.KeyExchanges,
+		"diffie-hellman-group-exchange-sha256",
+		"diffie-hellman-group-exchange-sha1",
+	)
 
 	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", s.Host.Address, s.Host.Port), s.Config)
 	if err != nil {

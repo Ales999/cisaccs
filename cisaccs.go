@@ -53,13 +53,14 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 	}
 
 	// Debug print account info
-	fmt.Printf("Connect to host: %s (%v)\n", host, hstData.HostIp)
+	fmt.Printf("!Connect to host: %s (%v)\n", host, hstData.HostIp)
 
 	// Настройка и подключение.
 	device, err := netrasp.New(hstData.HostIp,
 		netrasp.WithDriver("ios"),
 		netrasp.WithSSHPort(port),
 		netrasp.WithUsernamePasswordEnableSecret(hstAccount.Username, hstAccount.Password, hstAccount.Secret),
+		netrasp.WithInsecureIgnoreHostKey(),
 	)
 	if err != nil {
 		return outs, fmt.Errorf("unable to init config: %v", err)
@@ -69,7 +70,6 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 
 	err = device.Dial(ctx)
 	if err != nil {
-		//fmt.Printf("unable to connect: %v\n", err)
 		return outs, fmt.Errorf("unable to connect: %v", err)
 	}
 	defer device.Close(context.Background())
