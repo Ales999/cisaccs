@@ -2,7 +2,6 @@ package namedevs
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
@@ -16,18 +15,20 @@ type CiscoNameDev struct {
 	NameDev string // Имя узла (hostname)
 	Group   string // Имя Группы.
 	HostIp  string // Ip данного узла.
+	Iface   string // Имя интерфейса которым подключен у вышестояшего коммутатора, если есть.
 }
 
 // newCiscoNameDev  - вернуть ссылку на новый экземпляр структуры
-func newCiscoNameDev(namedev string, group string, hostip string) *CiscoNameDev {
+func newCiscoNameDev(namedev string, group string, hostip string, iface string) *CiscoNameDev {
 	return &CiscoNameDev{
 		NameDev: namedev,
 		Group:   group,
 		HostIp:  hostip,
+		Iface:   iface,
 	}
 }
 
-type CiscoNameDevs []CiscoNameDev
+type CiscoNameDevs CiscoNameDev
 
 func (c *CiscoNameDevs) GetByHostName(cisFileName string, hostName string) (*CiscoNameDev, error) {
 
@@ -38,18 +39,24 @@ func (c *CiscoNameDevs) GetByHostName(cisFileName string, hostName string) (*Cis
 		return nil, fmt.Errorf("error loading config: %v", err)
 	}
 
-	var ciscoNameDevs []CiscoNameDev
+	//dev := hostName
+	var cnd = newCiscoNameDev(
+		hostName,
+		kcis.String(hostName+".group"),
+		kcis.String(hostName+".host"),
+		kcis.String(hostName+".spb4face"),
+	)
 
-	// for _, dev := range confDevs {
-	dev := hostName
-	var cnd = newCiscoNameDev(dev, kcis.String(dev+".group"), kcis.String(dev+".host"))
-	ciscoNameDevs = append(ciscoNameDevs, *cnd)
-	//}
+	//var ciscoNameDevs CiscoNameDev
+	//ciscoNameDevs = append(ciscoNameDevs, *cnd)
 
-	return &ciscoNameDevs[0], nil
+	//return &ciscoNameDevs[0], nil
+	return cnd, nil
 
 }
 
+/*
+// TODO: add find by group
 func (c *CiscoNameDevs) GetHostsByGroupName(grpName string) []string {
 
 	var ret []string
@@ -62,3 +69,4 @@ func (c *CiscoNameDevs) GetHostsByGroupName(grpName string) []string {
 	return ret
 
 }
+*/

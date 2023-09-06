@@ -21,9 +21,8 @@ type sshConnection struct {
 func (s *sshConnection) Dial(ctx context.Context) error {
 
 	// Older cisco not using new crypto
-	s.Config.MACs = append(s.Config.MACs, []string{"hmac-sha2-256", "hmac-sha2-512"}...)
-	//s.Config.Ciphers = append(s.Config.Ciphers, []string{"aes128-ctr", "aes192-ctr", "aes256-ctr"}...)
-	s.Config.Ciphers = append(s.Config.Ciphers, []string{"aes128-cbc", "aes192-cbc", "aes256-cbc"}...)
+	s.Config.MACs = append(s.Config.MACs, "hmac-sha2-256", "hmac-sha2-512")
+	s.Config.Ciphers = append(s.Config.Ciphers, "aes128-cbc", "aes192-cbc", "aes256-cbc")
 	s.Config.KeyExchanges = append(
 		s.Config.KeyExchanges,
 		"diffie-hellman-group-exchange-sha256",

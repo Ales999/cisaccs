@@ -12,12 +12,14 @@ import (
 	"github.com/ales999/cisaccs/internal/utils"
 )
 
+/*
 // temp struct
-type Cisdata struct {
-	Ndevs   []namedevs.CiscoNameDev
-	Nstdats map[string]hostdata.HostData
-}
 
+	type Cisdata struct {
+		Ndevs   []namedevs.CiscoNameDev
+		Nstdats map[string]hostdata.HostData
+	}
+*/
 type CisAccount struct {
 	initated    bool
 	cisFileName string
@@ -33,6 +35,25 @@ func NewCisAccount(cisFileName string, pwdFileName string) *CisAccount {
 	}
 }
 
+// GetIfaceByHost - получить имя интерфейса, если указан
+func (a *CisAccount) GetIfaceByHost(host string) (string, error) {
+
+	var retstr string
+	// Проверка на корректность
+	if !a.initated {
+		return retstr, errors.New("create this struct by New command")
+	}
+
+	var cnd namedevs.CiscoNameDevs
+
+	hstData, err := cnd.GetByHostName(a.cisFileName, host) // get new CiscoNameDevs struct
+	if err != nil {
+		return retstr, err
+	}
+	return hstData.Iface, nil
+}
+
+// OneCisExecuteSsh - выполнить набор команд на одном хосте.
 func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]string, error) {
 
 	var outs []string // результат работы выполнения на cisco
@@ -100,29 +121,30 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 	return outs, nil
 }
 
+// MultiCisExecuteSsh - выполнить набор команд на множестве хостов
 func (a *CisAccount) MultiCisExecuteSsh(hosts []string, port int, cmds []string) ([]string, error) {
-	var outs []string
+
+	var arrouts []string // Возвращаемый массив
 	//
 	if !a.initated {
-		return outs, errors.New("create this struct by New command")
+		return arrouts, errors.New("create this struct by New command")
 	}
 	if (port <= 0) || (port > 65534) {
-		return outs, errors.New("ssh number port need > 0 and < 65534")
+		return arrouts, errors.New("ssh number port need > 0 and < 65534")
 	}
 
 	// Перебираем указанные хосты.
 	for _, host := range hosts {
+		// Для каждого хоста выполняем набор команд
 		rets, err := a.OneCisExecuteSsh(host, port, cmds)
 		if err != nil {
 			fmt.Println(err)
 		}
-		// for _, ret := range rets {
-		outs = append(outs, rets...)
-		// }
-
+		// Добавим массив полученный от 'OneCisExecuteSsh' в возвращаемый массив
+		arrouts = append(arrouts, rets...)
 	}
 
-	return outs, nil
+	return arrouts, nil
 }
 
 /*
