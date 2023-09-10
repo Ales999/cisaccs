@@ -27,6 +27,7 @@ func (s *sshConnection) Dial(ctx context.Context) error {
 		s.Config.KeyExchanges,
 		"diffie-hellman-group-exchange-sha256",
 		"diffie-hellman-group-exchange-sha1",
+		"diffie-hellman-group1-sha1",
 	)
 
 	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", s.Host.Address, s.Host.Port), s.Config)
