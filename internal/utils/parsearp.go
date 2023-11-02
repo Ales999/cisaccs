@@ -21,6 +21,22 @@ func NewArpLineData(ip string, mac string, iface string) *ArpLineData {
 
 }
 
+func (a *ArpLineData) GetIp() string {
+	return a.ip
+}
+
+func (a *ArpLineData) GetMac() string {
+	return a.mac
+}
+
+func (a *ArpLineData) GetIface() string {
+	return a.iface
+}
+
+func (a *ArpLineData) GetLen() int {
+	return len(a.iface) + len(a.ip) + len(a.mac)
+}
+
 func (a *ArpLineData) PrintData() {
 	fmt.Printf("IP: %v\n", a.ip)
 	fmt.Printf("MAC: %v\n", a.mac)

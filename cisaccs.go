@@ -12,14 +12,8 @@ import (
 	"github.com/ales999/cisaccs/internal/utils"
 )
 
-/*
-// temp struct
+var CisDebug bool
 
-	type Cisdata struct {
-		Ndevs   []namedevs.CiscoNameDev
-		Nstdats map[string]hostdata.HostData
-	}
-*/
 type CisAccount struct {
 	initated    bool
 	cisFileName string
@@ -60,7 +54,7 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 
 	// Проверка на корректность
 	if !a.initated {
-		return outs, errors.New("create this struct by New command")
+		return outs, errors.New("not create this struct by NewCisAccount func")
 	}
 
 	var cnd namedevs.CiscoNameDevs
@@ -70,11 +64,13 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 	}
 	hstAccount, found := hostdata.GetHostAccountByGroupName(a.pwdFileName, hstData.Group)
 	if !found {
-		return outs, errors.New("not found account")
+		return outs, fmt.Errorf("error: not found account %s", host)
 	}
 
 	// Debug print account info
-	fmt.Printf("!Connect to host: %s (%v)\n", host, hstData.HostIp)
+	if CisDebug {
+		fmt.Printf("!Connect to host: %s (%v)", host, hstData.HostIp)
+	}
 
 	// Настройка и подключение.
 	device, err := netrasp.New(hstData.HostIp,
@@ -106,7 +102,10 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 	ctx, cancelRun := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelRun()
 
-	fmt.Println("--------------------------------------------------")
+	if CisDebug {
+		fmt.Println(" - Done")
+	}
+
 	for _, sendCommand := range cmds {
 		output, err := device.Run(ctx, sendCommand)
 		if err != nil {
@@ -146,27 +145,3 @@ func (a *CisAccount) MultiCisExecuteSsh(hosts []string, port int, cmds []string)
 
 	return arrouts, nil
 }
-
-/*
-// test using internal using
-func (a *CisAccount) Testme(hostIp string, port string, userName string, userPassword string) {
-
-	portInt, err := strconv.Atoi(port)
-	if err != nil {
-		panic(err)
-	}
-	// Настройка и подключение.
-	device, err := netrasp.New(hostIp,
-		netrasp.WithDriver("ios"),
-		netrasp.WithSSHPort(portInt),
-		netrasp.WithUsernamePassword(userName, userPassword),
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	// test print
-	fmt.Println(device)
-
-}
-*/
