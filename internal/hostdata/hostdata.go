@@ -13,12 +13,12 @@ type HostData struct {
 }
 
 func GetHostAccountByGroupName(fileName string, groupName string) (result HostData, found bool) {
-
+	// Получаем карту аккаунтов из файла, где имя_группы будет индеком.
 	hd, err := GetHostAccount(fileName)
 	if err != nil {
 		log.Println(err)
 	}
-
+	// Поиск в карте нужного по имени группы
 	if out, ok := hd[groupName]; ok {
 		return out, true
 	} else {
@@ -26,12 +26,11 @@ func GetHostAccountByGroupName(fileName string, groupName string) (result HostDa
 	}
 }
 
+// Вернуть список аккаунтов из файла конфигурации
 func GetHostAccount(fileName string) (map[string]HostData, error) {
 
-	// var hostDataMap map[string]HostData // Данные по всем группам и соответствиям ИмяГруппы => Явки/Пароли по ней
-
 	// Данные по всем группам и соответствиям ИмяГруппы => Явки/Пароли по ней
-	hostDataMap := make(map[string]HostData) // Данные по всем группам и соответствиям ИмяГруппы => Явки/Пароли по ней
+	hostDataMap := make(map[string]HostData)
 
 	sourceFileStat, err := os.Stat(fileName)
 	if err != nil {
@@ -68,7 +67,6 @@ func GetHostAccount(fileName string) (map[string]HostData, error) {
 			return nil, err
 		}
 		hostDataMap[key] = hd
-		// out = append(out, hd)
 	}
 
 	return hostDataMap, nil

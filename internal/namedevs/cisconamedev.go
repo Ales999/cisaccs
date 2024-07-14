@@ -47,10 +47,6 @@ func (c *CiscoNameDevs) GetByHostName(cisFileName string, hostName string) (*Cis
 		kcis.String(hostName+".spb4face"),
 	)
 
-	//var ciscoNameDevs CiscoNameDev
-	//ciscoNameDevs = append(ciscoNameDevs, *cnd)
-
-	//return &ciscoNameDevs[0], nil
 	return cnd, nil
 
 }
