@@ -2,6 +2,7 @@ package namedevs
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
@@ -12,19 +13,21 @@ import (
 //
 // PS: Кроме данных с именами и паролем
 type CiscoNameDev struct {
-	NameDev string // Имя узла (hostname)
-	Group   string // Имя Группы.
-	HostIp  string // Ip данного узла.
-	Iface   string // Имя интерфейса которым подключен у вышестояшего коммутатора, если есть.
+	NameDev   string // Имя узла (hostname)
+	Group     string // Имя Группы.
+	HostIp    string // Ip данного узла (management).
+	HostExtIp string // Внешний IP
+	Iface     string // Имя интерфейса которым подключен у вышестояшего коммутатора, если есть.
 }
 
 // newCiscoNameDev  - вернуть ссылку на новый экземпляр структуры
-func newCiscoNameDev(namedev string, group string, hostip string, iface string) *CiscoNameDev {
+func newCiscoNameDev(namedev string, group string, hostip string, hostextip string, iface string) *CiscoNameDev {
 	return &CiscoNameDev{
-		NameDev: namedev,
-		Group:   group,
-		HostIp:  hostip,
-		Iface:   iface,
+		NameDev:   namedev,
+		Group:     group,
+		HostIp:    hostip,
+		HostExtIp: hostextip,
+		Iface:     iface,
 	}
 }
 
@@ -44,6 +47,7 @@ func (c *CiscoNameDevs) GetByHostName(cisFileName string, hostName string) (*Cis
 		hostName,
 		kcis.String(hostName+".group"),
 		kcis.String(hostName+".host"),
+		kcis.String(hostName+".hoost_e"),
 		kcis.String(hostName+".spb4face"),
 	)
 
@@ -52,17 +56,66 @@ func (c *CiscoNameDevs) GetByHostName(cisFileName string, hostName string) (*Cis
 }
 
 /*
-// TODO: add find by group
-func (c *CiscoNameDevs) GetHostsByGroupName(grpName string) []string {
+// GetHostsByGroupName - получить массив данного типа хостов относящийся к заданной группе
+// Пока вроде не требуется
+func (c *CiscoNameDevs) GetsByGroupName(cisFileName string, groupName string) ([]*CiscoNameDev, error) {
 
-	var ret []string
+	var ret []*CiscoNameDev
 
-	for _, dev := range *c {
-		if strings.EqualFold(dev.Group, grpName) {
-			ret = append(ret, dev.NameDev)
+	kcis := koanf.New(".")
+
+	if err := kcis.Load(file.Provider(cisFileName), yaml.Parser()); err != nil {
+		return nil, fmt.Errorf("error loading config: %v", err)
+	}
+	// Вернуть все имена хостов
+	var hostLists = kcis.MapKeys("")
+	// Если список хостов не пуст
+	if len(hostLists) > 0 {
+		// Бежим по найденным спискам имен хостов
+		for _, hst := range hostLists {
+			// Если у данного хоста группа искомая, то хост добавляем в результат
+			if strings.EqualFold(kcis.String(hst+".group"), groupName) {
+				//Создадим  новую структуру
+				var cnd = newCiscoNameDev(
+					hst,
+					kcis.String(hst+".group"),
+					kcis.String(hst+".host"),
+					kcis.String(hst+".hoost_e"),
+					kcis.String(hst+".spb4face"),
+				)
+				// И добавим ее в массив структур
+				ret = append(ret, cnd)
+
+			}
 		}
 	}
-	return ret
+	return ret, nil
 
 }
 */
+
+// GetHostsByGroupName - получить список хостов относящийся к заданной группе
+func (c *CiscoNameDevs) GetHostsByGroupName(cisFileName string, grpName string) ([]string, error) {
+
+	var ret []string
+
+	kcis := koanf.New(".")
+
+	if err := kcis.Load(file.Provider(cisFileName), yaml.Parser()); err != nil {
+		return nil, fmt.Errorf("error loading config: %v", err)
+	}
+	// Вернуть все имена хостов
+	var hostLists = kcis.MapKeys("")
+	// Если список хостов не пуст
+	if len(hostLists) > 0 {
+		// Бежим по найденным спискам имен хостов
+		for _, hst := range hostLists {
+			// Если у данного хоста группа искомая, то хост добавляем в результат
+			if strings.EqualFold(kcis.String(hst+".group"), grpName) {
+				ret = append(ret, hst)
+			}
+		}
+	}
+	return ret, nil
+
+}

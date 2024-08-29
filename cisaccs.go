@@ -29,7 +29,7 @@ func NewCisAccount(cisFileName string, pwdFileName string) *CisAccount {
 	}
 }
 
-// GetIfaceByHost - получить имя интерфейса, если указан
+// GetIfaceByHost - получить имя интерфейса хоста, если указан
 func (a *CisAccount) GetIfaceByHost(host string) (string, error) {
 
 	var retstr string
@@ -112,12 +112,41 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 			fmt.Printf("unable to run command: %v\n", err)
 			continue
 		}
-		mulouts := utils.ConvMultiStrToArrayStr(output)
-		outs = append(outs, mulouts...)
+		multiouts := utils.ConvMultiStrToArrayStr(output)
+		outs = append(outs, multiouts...)
 	}
 	device.Close(ctx)
 
 	return outs, nil
+}
+
+// MultiCisWithByGroupNameExecuteSsh - выполнить команды на группе хостов, в указанной группе
+func (a *CisAccount) MultiCisWithByGroupNameExecuteSsh(groupName string, port int, cmds []string) ([][]string, error) {
+	var arrouts [][]string // Возвращаемый массив
+
+	var cnd namedevs.CiscoNameDevs
+	// Получаем список хостов что входят в указанную группу
+	hostgrps, err := cnd.GetHostsByGroupName(a.cisFileName, groupName)
+	if err != nil {
+		return nil, err
+	}
+	// Выполняем команды одну за другой
+	for _, hsttorun := range hostgrps {
+
+		rethst, err := a.OneCisExecuteSsh(hsttorun, port, cmds)
+		if err != nil { // Если один их хостов например недоступен это не повод прерывать работу на остальных
+			// Вернем ошибку с именем хоста и что случилось
+			errstr := hsttorun + " : " + err.Error()
+			arrouts = append(arrouts, []string{errstr})
+
+		} else {
+			// Ошибок нет, сохраняем вывод.
+			arrouts = append(arrouts, rethst)
+		}
+	}
+
+	return arrouts, nil
+
 }
 
 // MultiCisExecuteSsh - выполнить набор команд на множестве хостов
@@ -144,4 +173,18 @@ func (a *CisAccount) MultiCisExecuteSsh(hosts []string, port int, cmds []string)
 	}
 
 	return arrouts, nil
+}
+
+// Test get hosts by goup name
+func (a *CisAccount) GetTestGoups(groupName string) {
+
+	// a.cisFileName,
+	var cnd namedevs.CiscoNameDevs
+	hosts, err := cnd.GetHostsByGroupName(a.cisFileName, groupName)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(`----`)
+	fmt.Println(hosts)
+
 }
