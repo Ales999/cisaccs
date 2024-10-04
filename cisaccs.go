@@ -12,7 +12,7 @@ import (
 	"github.com/ales999/cisaccs/internal/utils"
 )
 
-var CisDebug bool
+//var CisDebug bool
 
 type CisAccount struct {
 	initated    bool
@@ -66,12 +66,12 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 	if !found {
 		return outs, fmt.Errorf("error: not found account %s", host)
 	}
-
-	// Debug print account info
-	if CisDebug {
-		fmt.Printf("!Connect to host: %s (%v)", host, hstData.HostIp)
-	}
-
+	/*
+		// Debug print account info
+		if CisDebug {
+			fmt.Printf("!Connect to host: %s (%v)", host, hstData.HostIp)
+		}
+	*/
 	// Настройка и подключение.
 	device, err := netrasp.New(hstData.HostIp,
 		netrasp.WithDriver("ios"),
@@ -101,11 +101,11 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 
 	ctx, cancelRun := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelRun()
-
-	if CisDebug {
-		fmt.Println(" - Done")
-	}
-
+	/*
+		if CisDebug {
+			fmt.Println(" - Done")
+		}
+	*/
 	for _, sendCommand := range cmds {
 		output, err := device.Run(ctx, sendCommand)
 		if err != nil {
@@ -175,6 +175,7 @@ func (a *CisAccount) MultiCisExecuteSsh(hosts []string, port int, cmds []string)
 	return arrouts, nil
 }
 
+/*
 // Test get hosts by goup name
 func (a *CisAccount) GetTestGoups(groupName string) {
 
@@ -188,3 +189,4 @@ func (a *CisAccount) GetTestGoups(groupName string) {
 	fmt.Println(hosts)
 
 }
+*/
