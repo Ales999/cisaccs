@@ -20,12 +20,14 @@ type sshConnection struct {
 // Dial opens an SSH connection.
 func (s *sshConnection) Dial(ctx context.Context) error {
 
-	// Older cisco not using new crypto
+	// Older cisco not using new crypto (Check rfc9142)
 	s.Config.MACs = append(s.Config.MACs, "hmac-sha2-256", "hmac-sha2-512")
 	s.Config.Ciphers = append(s.Config.Ciphers, "aes128-cbc", "aes192-cbc", "aes256-cbc")
 	s.Config.KeyExchanges = append(
 		s.Config.KeyExchanges,
+		"diffie-hellman-group14-sha256",
 		"diffie-hellman-group-exchange-sha256",
+		"diffie-hellman-group14-sha1",
 		"diffie-hellman-group-exchange-sha1",
 		"diffie-hellman-group1-sha1",
 	)
