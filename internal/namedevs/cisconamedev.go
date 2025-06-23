@@ -44,7 +44,7 @@ func (c *CiscoNameDevs) GetByHostName(cisFileName string, hostName string) (*Cis
 
 	//dev := hostName
 	var cnd = newCiscoNameDev(
-		hostName,
+		strings.ToLower(hostName),
 		kcis.String(hostName+".group"),
 		kcis.String(hostName+".host"),
 		kcis.String(hostName+".hoost_e"),
@@ -112,7 +112,7 @@ func (c *CiscoNameDevs) GetHostsByGroupName(cisFileName string, grpName string) 
 		for _, hst := range hostLists {
 			// Если у данного хоста группа искомая, то хост добавляем в результат
 			if strings.EqualFold(kcis.String(hst+".group"), grpName) {
-				ret = append(ret, hst)
+				ret = append(ret, strings.ToLower(hst))
 			}
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ales999/cisaccs/internal/hostdata"
@@ -12,7 +13,12 @@ import (
 	"github.com/ales999/cisaccs/internal/utils"
 )
 
-//var CisDebug bool
+var cisDebug bool
+
+// Выводить больше отладочной информации о ходе работы
+func SetMoreOutputConnectInfo(moreDebug bool) {
+	cisDebug = moreDebug
+}
 
 type CisAccount struct {
 	initated    bool
@@ -48,9 +54,17 @@ func (a *CisAccount) GetIfaceByHost(host string) (string, error) {
 }
 
 // OneCisExecuteSsh - выполнить набор команд на одном хосте.
-func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]string, error) {
+func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string, connectTimeOut ...int) ([]string, error) {
+
+	// Приведем имя хоста к прописным буквам
+	host = strings.ToLower(host)
 
 	var outs []string // результат работы выполнения на cisco
+	// Если необязательный параметр не указан то будем использовать его
+	var dialTimeout = 30
+	if len(connectTimeOut) > 0 {
+		dialTimeout = connectTimeOut[0]
+	}
 
 	// Проверка на корректность
 	if !a.initated {
@@ -66,16 +80,17 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 	if !found {
 		return outs, fmt.Errorf("error: not found account %s", host)
 	}
-	/*
-		// Debug print account info
-		if CisDebug {
-			fmt.Printf("!Connect to host: %s (%v)", host, hstData.HostIp)
-		}
-	*/
+
+	// Debug print account info
+	if cisDebug {
+		fmt.Printf("!Connect to host: %s (%v)", host, hstData.HostIp)
+	}
+
 	// Настройка и подключение.
 	device, err := netrasp.New(hstData.HostIp,
 		netrasp.WithDriver("ios"),
 		netrasp.WithSSHPort(port),
+		netrasp.WithDialTimeout(time.Duration(dialTimeout)*time.Second),
 		netrasp.WithUsernamePasswordEnableSecret(hstAccount.Username, hstAccount.Password, hstAccount.Secret),
 		netrasp.WithInsecureIgnoreHostKey(),
 	)
@@ -94,6 +109,7 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 	ctx, cancelEnable := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancelEnable()
 
+	// TODO: If user is privilege 15 - not need enable
 	err = device.Enable(ctx)
 	if err != nil {
 		return outs, fmt.Errorf("unable to Enable command: %v", err)
@@ -121,8 +137,14 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string) ([]s
 }
 
 // MultiCisWithByGroupNameExecuteSsh - выполнить команды на группе хостов, в указанной группе
-func (a *CisAccount) MultiCisWithByGroupNameExecuteSsh(groupName string, port int, cmds []string) ([][]string, error) {
+func (a *CisAccount) MultiCisWithByGroupNameExecuteSsh(groupName string, port int, cmds []string, connectTimeOut ...int) ([][]string, error) {
 	var arrouts [][]string // Возвращаемый массив
+
+	// Если необязательный параметр не указан то будем использовать его
+	var dialTimeout = 30
+	if len(connectTimeOut) > 0 {
+		dialTimeout = connectTimeOut[0]
+	}
 
 	var cnd namedevs.CiscoNameDevs
 	// Получаем список хостов что входят в указанную группу
@@ -132,8 +154,8 @@ func (a *CisAccount) MultiCisWithByGroupNameExecuteSsh(groupName string, port in
 	}
 	// Выполняем команды одну за другой
 	for _, hsttorun := range hostgrps {
-
-		rethst, err := a.OneCisExecuteSsh(hsttorun, port, cmds)
+		// Вызываем функцию выше
+		rethst, err := a.OneCisExecuteSsh(hsttorun, port, cmds, dialTimeout)
 		if err != nil { // Если один их хостов например недоступен это не повод прерывать работу на остальных
 			// Вернем ошибку с именем хоста и что случилось
 			errstr := hsttorun + " : " + err.Error()
