@@ -1,6 +1,9 @@
 module github.com/ales999/cisaccs
 
-go 1.23.7
+// go-git supports the last 3 stable Go versions.
+go 1.23.0
+
+toolchain go1.23.7
 
 require golang.org/x/crypto v0.39.0
 
