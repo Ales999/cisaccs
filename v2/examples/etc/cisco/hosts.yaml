@@ -1,0 +1,73 @@
+---
+
+# spb office
+
+spb_1234_x1:
+  hostname: 192.168.19.17
+  groups:
+    - spb
+
+  data:
+    hoost_e: 11.22.33.12
+    role: "access"
+
+spb_1:
+  hostname: 192.168.123.17
+  groups:
+    - spb
+  data:
+    role: "access"
+
+vita4_gkr:
+  groups:
+    - vnk
+  hostname: 192.168.122.1
+  data:
+    role: "access"
+
+vira7_4:
+  groups:
+    - vnk
+  hostname: 192.168.21.2
+  data:
+    role: "access"
+
+vira2:
+  groups:
+    - vbk
+  hostname: 192.168.12.3
+  data:
+    role: "access"
+
+delone:
+  groups:
+    - omega
+  hostname: 172.16.1.2
+  data:
+    hoost_e: 11.22.33.11
+
+demo3750x:
+  groups:
+    - vitr
+  hostname: 192.168.12.3
+
+demoforte:
+  groups:
+    - rmt
+  hostname: 172.1.2.3
+  data:
+    hoost_e: 12.21.21.12
+    hoost_t1: 172.1.1.1
+    hoost_t2: 172.1.2.29
+    role: "edge"
+
+largehost:
+  groups:
+    - rmt
+  hostname: 172.1.17.52
+  data:
+    hoost_e: 111.111.111.231
+    #hoost_e: 123.123.45.123
+    hoost_t1: 172.1.1.9
+    hoost_t2: 172.1.2.9
+    role: "edge"

@@ -1,0 +1,114 @@
+---
+spb:
+  username: spbuser
+  password: spbpassword
+  platform: ios
+  data:
+    secret: "spbenable"
+    site : 'SPB'
+    role: 'access'
+  connection_options:
+    scrapli:
+      extras:
+        auth_secondary: "spbsecret"
+        ssh_config_file: True
+        auth_strict_key: False
+    napalm:
+      extras:
+        optional_args:
+          secret: spboptsecter
+          global_delay_factor: 5
+
+msk:
+  username: mskuser
+  password: mskpassword
+  platform: ios data:
+    secret: "enablemsksecret"
+    site: 'MSK'
+    role: 'access'
+  connection_options:
+    scrapli:
+      extras:
+        auth_secondary: "authscrapisecret"
+        ssh_config_file: True
+        auth_strict_key: False
+    napalm:
+      extras:
+        optional_args:
+          secret: "secretnapalm"
+          global_delay_factor: 5
+
+vnk:
+  username: vnkadm
+  password: vnkpassword
+  platform: ios
+  data:
+    secret: "enablevnkenable"
+    site: 'VNK'
+    locaion_id: 'bf971023-fd95-11e1-a0ad-00155d0257c7'
+    role: 'access'
+  connection_options:
+    scrapli:
+      extras:
+        auth_secondary: "pwdscrapli"
+        ssh_config_file: True
+        auth_strict_key: False
+    napalm:
+      extras:
+        optional_args:
+          secret: "napalmsecret"
+          global_delay_factor: 5
+
+vnk1:
+  groups:
+    - vnk
+  username: `demovn1ruser` # comment
+#  password: demoexamplepwd
+  data:
+    site: 'VNK Name'
+    secret: "demoenable"
+  connection_options:
+    scrapli:
+      extras:
+        auth_secondary: "demosec"
+
+rmt:
+  groups:
+    - vnk
+
+vbk:
+  groups:
+    - vnk1
+  username: berta
+  data:
+    site: 'Big Berta'
+
+nerpa:
+  groups:
+    - vnk1
+  data:
+    site: 'Nerpa'
+
+omega:
+  groups:
+    - vnk
+  data:
+    site: 'Omega'
+
+vitr:
+  groups:
+    - vnk
+  data:
+    site: 'Vitrina Site'
+
+# special data section                                                                                                                                                   
+og_name:
+  data:
+    name: true
+
+bootflash:
+  connection_options:
+    napalm:
+      extras:
+        optional_args:
+          dest_file_system: "bootflash:"

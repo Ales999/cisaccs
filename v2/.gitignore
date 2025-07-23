@@ -17,6 +17,8 @@
 !README.md
 !LICENSE
 
+# Examples
+!examples/**/*.yaml
 # !Makefile
 
 # ...even if they are in subdirectories
