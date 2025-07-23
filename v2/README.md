@@ -1,6 +1,6 @@
 # cisaccs
 
-Group Cisco access with group configs
+Group Cisco access with group configs V2. Waringn - change config file internal format and struct.
 
 Example use:
 
@@ -10,7 +10,7 @@ Use exampe files from 'example' dir.
 package main
 
 import (
- "github.com/ales999/cisaccs"
+ "github.com/ales999/cisaccs/v2"
 )
 
 
