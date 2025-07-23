@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ales999/cisaccs/internal/hostdata"
-	"github.com/ales999/cisaccs/internal/namedevs"
-	"github.com/ales999/cisaccs/internal/netrasp"
-	"github.com/ales999/cisaccs/internal/utils"
+	"github.com/ales999/cisaccs/v2/internal/hostdata"
+	"github.com/ales999/cisaccs/v2/internal/namedevs"
+	"github.com/ales999/cisaccs/v2/internal/netrasp"
+	"github.com/ales999/cisaccs/v2/internal/utils"
 )
 
 var cisDebug bool

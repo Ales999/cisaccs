@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ales999/cisaccs/internal/utils"
+	"github.com/ales999/cisaccs/v2/internal/utils"
 )
 
 func TestCisFindVlan(t *testing.T) {

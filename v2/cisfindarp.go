@@ -3,7 +3,7 @@ package cisaccs
 import (
 	"strings"
 
-	"github.com/ales999/cisaccs/internal/utils"
+	"github.com/ales999/cisaccs/v2/internal/utils"
 )
 
 // Парсинг ARP строк и поиск соответствия IP или MAC

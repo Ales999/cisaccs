@@ -1,7 +1,7 @@
 package cisaccs
 
 import (
-	"github.com/ales999/cisaccs/internal/utils"
+	"github.com/ales999/cisaccs/v2/internal/utils"
 )
 
 // Парсинг строк вывода 'sh vlan br' и поиск нужного по ID
