@@ -20,7 +20,7 @@ spb_1:
 
 vita4_gkr:
   groups:
-    - vnk
+    - vnk1
   hostname: 192.168.122.1
   data:
     role: "access"
