@@ -21,17 +21,17 @@ func SetMoreOutputConnectInfo(moreDebug bool) {
 }
 
 type CisAccount struct {
-	initated    bool
-	cisFileName string
-	pwdFileName string
+	initated    bool   // Инициализировано через New(...)
+	cisFileName string // Файл с именами хостов, с указанием группы (hosts.yaml)
+	pwdFileName string // Файл с акаунтами и паролями, по группам (groups.yaml)
 }
 
 func NewCisAccount(cisFileName string, pwdFileName string) *CisAccount {
 
 	return &CisAccount{
-		initated:    true,        // Инициализировано через New(...)
-		cisFileName: cisFileName, // Файл с именами хостов, с указанием группы
-		pwdFileName: pwdFileName, // Файл с акаунтами и паролями, по группам
+		initated:    true,
+		cisFileName: cisFileName,
+		pwdFileName: pwdFileName,
 	}
 }
 
@@ -46,7 +46,7 @@ func (a *CisAccount) GetIfaceByHost(host string) (string, error) {
 
 	var cnd namedevs.CiscoNameDevs
 
-	hstData, err := cnd.GetByHostName(a.cisFileName, host) // get new CiscoNameDevs struct
+	hstData, err := cnd.GetHostDataByHostName(a.cisFileName, host) // get new CiscoNameDevs struct
 	if err != nil {
 		return retstr, err
 	}
@@ -54,10 +54,13 @@ func (a *CisAccount) GetIfaceByHost(host string) (string, error) {
 }
 
 // OneCisExecuteSsh - выполнить набор команд на одном хосте.
-func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string, connectTimeOut ...int) ([]string, error) {
+func (a *CisAccount) OneCisExecuteSsh(hostName string, port int, cmds []string, connectTimeOut ...int) ([]string, error) {
 
 	// Приведем имя хоста к прописным буквам
-	host = strings.ToLower(host)
+	hostName = strings.ToLower(strings.TrimSpace(hostName))
+	if len(hostName) == 0 {
+		return nil, errors.New("host name is empty")
+	}
 
 	var outs []string // результат работы выполнения на cisco
 	// Если необязательный параметр не указан то будем использовать его
@@ -72,18 +75,20 @@ func (a *CisAccount) OneCisExecuteSsh(host string, port int, cmds []string, conn
 	}
 
 	var cnd namedevs.CiscoNameDevs
-	hstData, err := cnd.GetByHostName(a.cisFileName, host)
+	// Запросим данные о хосте по  его имени
+	hstData, err := cnd.GetHostDataByHostName(a.cisFileName, hostName)
 	if err != nil {
 		return outs, err
 	}
+	// Запрос данных для авторизации на хосте по имени группы
 	hstAccount, found := hostdata.GetHostAccountByGroupName(a.pwdFileName, hstData.Group)
 	if !found {
-		return outs, fmt.Errorf("error: not found account %s", host)
+		return outs, fmt.Errorf("error: not found account %s", hostName)
 	}
 
 	// Debug print account info
 	if cisDebug {
-		fmt.Printf("!Connect to host: %s (%v)", host, hstData.HostIp)
+		fmt.Printf("!Connect to host: %s (%v)", hostName, hstData.HostIp)
 	}
 
 	// Настройка и подключение.
