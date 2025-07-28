@@ -21,11 +21,12 @@ func main() {
  pwdFileName := "/etc/cisco/passw.json"
 
  acc := cisaccs.NewCisAccount(cisFileName, pwdFileName)
- err := acc.OneCisExecuteSsh("gns3-r2", portSsh, []string{"sh arp"})
+ ret,err := acc.OneCisExecuteSsh("gns3-r2", portSsh, []string{"sh arp"})
  if err != nil {
   panic(err)
  }
-
+ // Print result of command execution
+ fmt.Println(ret)
 }
 ```
 
