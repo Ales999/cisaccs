@@ -7,10 +7,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
-	"github.com/knadh/koanf/parsers/yaml"
-	"github.com/knadh/koanf/providers/file"
-	"github.com/knadh/koanf/v2"
 )
 
 // CiscoNameDev содержит в себе имя устройства (cisco) и его параметры для подключения
@@ -79,7 +75,8 @@ func (c *CiscoNameDevs) GetHostDataByHostName(cisFileName string, hostName strin
 	}
 
 	ret := newCiscoNameDev(hostName, hostGroups[0], hostIp, hostIpData["hoost_e"], "-none-")
-	fmt.Println(ret)
+
+	//fmt.Println(ret)
 	return ret, nil
 	//return newCiscoNameDev(hostName, hostGroups[0], hostIp, hostIpData["hoost_e"], "-none-"), nil
 
@@ -102,24 +99,45 @@ func (c *CiscoNameDevs) GetHostsByGroupName(cisFileName string, grpName string) 
 
 	var ret []string
 
-	kcis := koanf.New(".")
-
-	if err := kcis.Load(file.Provider(cisFileName), yaml.Parser()); err != nil {
-		return nil, fmt.Errorf("error loading config: %v", err)
+	ctx := context.Background()
+	// Load hosts from config file.
+	hostsMap, _, err := loadHosts(ctx, cisFileName)
+	if err != nil {
+		return nil, errors.New("Ошибка при чтении/парсинге файла groups.yaml" + err.Error() + " " + cisFileName)
 	}
-	// Вернуть все имена хостов
-	var hostLists = kcis.MapKeys("")
-	// Если список хостов не пуст
-	if len(hostLists) > 0 {
-		// Бежим по найденным спискам имен хостов
-		for _, hst := range hostLists {
-			// Если у данного хоста группа искомая, то хост добавляем в результат
-			if strings.EqualFold(kcis.String(hst+".group"), grpName) {
-				ret = append(ret, strings.ToLower(hst))
+
+	// DEBUG code
+	fmt.Println(hostsMap)
+	fmt.Println("--------------")
+	for _, grp := range hostsMap[grpName] { // перебираем группы в hostsMap
+		fmt.Println(grp)
+	}
+	// -------------
+
+	// Temp error - not implemented yet.
+	return ret, errors.New("func GetHostsByGroupName - not implemented yet")
+
+	/*
+
+		kcis := koanf.New(".")
+
+		if err := kcis.Load(file.Provider(cisFileName), yaml.Parser()); err != nil {
+			return nil, fmt.Errorf("error loading config: %v", err)
+		}
+		// Вернуть все имена хостов
+		var hostLists = kcis.MapKeys("")
+		// Если список хостов не пуст
+		if len(hostLists) > 0 {
+			// Бежим по найденным спискам имен хостов
+			for _, hst := range hostLists {
+				// Если у данного хоста группа искомая, то хост добавляем в результат
+				if strings.EqualFold(kcis.String(hst+".group"), grpName) {
+					ret = append(ret, strings.ToLower(hst))
+				}
 			}
 		}
-	}
-	return ret, nil
+	*/
+	//return ret, nil
 
 }
 
