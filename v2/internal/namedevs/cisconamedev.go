@@ -94,10 +94,34 @@ func (c *CiscoNameDevs) GetHostDataByHostName(cisFileName string, hostName strin
 
 }
 
+// findHostsInGroup - Получает список хостов, входящих в указанную группу.
+//
+// Параметры:
+//
+//	hostsByGroup: карта памяти, где ключ - имя хоста, а значение - массив имен групп.
+//	groupName: имя группы, для поиска хостов.
+//
+// Возвращает:
+//
+//	массив строк, содержащий имена хостов, входящих в указанную группу.
+//	Если группа не найдена, возвращает пустой массив.
+func findHostsInGroup(hostsByGroup map[string][]string, groupName string) []string {
+	var hosts []string
+
+	for host, groups := range hostsByGroup {
+		for _, g := range groups {
+			if g == groupName {
+				hosts = append(hosts, host)
+				break // Чтобы не добавлять хост несколько раз, если он входит в группу несколько раз
+			}
+		}
+	}
+
+	return hosts
+}
+
 // GetHostsByGroupName - получить список хостов относящийся к заданной группе
 func (c *CiscoNameDevs) GetHostsByGroupName(cisFileName string, grpName string) ([]string, error) {
-
-	var ret []string
 
 	ctx := context.Background()
 	// Load hosts from config file.
@@ -105,40 +129,22 @@ func (c *CiscoNameDevs) GetHostsByGroupName(cisFileName string, grpName string) 
 	if err != nil {
 		return nil, errors.New("Ошибка при чтении/парсинге файла groups.yaml" + err.Error() + " " + cisFileName)
 	}
-
-	// DEBUG code
-	fmt.Println(hostsMap)
-	fmt.Println("--------------")
-	for _, grp := range hostsMap[grpName] { // перебираем группы в hostsMap
-		fmt.Println(grp)
-	}
-	// -------------
-
-	// Temp error - not implemented yet.
-	return ret, errors.New("func GetHostsByGroupName - not implemented yet")
-
 	/*
-
-		kcis := koanf.New(".")
-
-		if err := kcis.Load(file.Provider(cisFileName), yaml.Parser()); err != nil {
-			return nil, fmt.Errorf("error loading config: %v", err)
-		}
-		// Вернуть все имена хостов
-		var hostLists = kcis.MapKeys("")
-		// Если список хостов не пуст
-		if len(hostLists) > 0 {
-			// Бежим по найденным спискам имен хостов
-			for _, hst := range hostLists {
-				// Если у данного хоста группа искомая, то хост добавляем в результат
-				if strings.EqualFold(kcis.String(hst+".group"), grpName) {
-					ret = append(ret, strings.ToLower(hst))
-				}
-			}
+		// Получаем список всех ключей из карты - получим сртслк самих хостов.
+		allHosts := make([]string, len(hostsMap))
+		i := 0
+		for k := range hostsMap {
+			allHosts[i] = k
+			i++
 		}
 	*/
-	//return ret, nil
+	// Получаем список всех ключей из карты
+	hosts := findHostsInGroup(hostsMap, grpName)
+	if len(hosts) == 0 {
+		return nil, errors.New("группа не найдена в файле groups.yaml")
+	}
 
+	return hosts, nil
 }
 
 // --- V2 ---
