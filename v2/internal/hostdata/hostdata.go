@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"slices"
@@ -287,11 +286,11 @@ func GetHostDataInfo(hostName string, hostGroups []string, groupsMap map[string]
 		for !found {
 			group, found := groupsMap[groupName]
 			if !found {
-				fmt.Printf("Группа %s не найдена в groupsMap\n", groupName)
+				//fmt.Printf("Группа %s не найдена в groupsMap\n", groupName)
 				break
 			}
 
-			fmt.Printf("Информация о группе %s: %v\n", groupName, group)
+			//fmt.Printf("Информация о группе %s: %v\n", groupName, group)
 
 			for _, key := range []string{"username", "password", "secret"} {
 				if val, ok := group[key]; ok && (response.UserName == "" || response.Password == "" || response.EnablePwd == "") {
@@ -310,9 +309,9 @@ func GetHostDataInfo(hostName string, hostGroups []string, groupsMap map[string]
 							response.EnablePwd = val
 						}
 					}
-				} else if !ok {
-					fmt.Printf("Ключ %s не найден в группе %s\n", key, groupName)
-				}
+				} //else if !ok {
+					//fmt.Printf("Ключ %s не найден в группе %s\n", key, groupName)
+				//}
 			}
 
 			parentGroups := extractGroupsFromGroup(groupName, groupsMap)

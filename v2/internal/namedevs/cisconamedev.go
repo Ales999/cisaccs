@@ -69,7 +69,7 @@ func (c *CiscoNameDevs) GetHostDataByHostName(cisFileName string, hostName strin
 	//}
 
 	// test debug output
-	fmt.Printf("Группы для хоста %s: %v\n", hostName, hostGroups)
+	//fmt.Printf("Группы для хоста %s: %v\n", hostName, hostGroups)
 	if len(hostGroups) <= 0 {
 		return nil, errors.New("группа для хоcта не найдена")
 	}
