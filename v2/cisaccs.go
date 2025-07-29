@@ -36,17 +36,17 @@ func NewCisAccount(cisFileName string, pwdFileName string) *CisAccount {
 }
 
 // GetIfaceByHost - получить имя интерфейса хоста, если указан
-func (a *CisAccount) GetIfaceByHost(host string) (string, error) {
+func (ca *CisAccount) GetIfaceByHost(host string) (string, error) {
 
 	var retstr string
 	// Проверка на корректность
-	if !a.initated {
+	if !ca.initated {
 		return retstr, errors.New("create this struct by New command")
 	}
 
 	var cnd namedevs.CiscoNameDevs
 
-	hstData, err := cnd.GetHostDataByHostName(a.cisFileName, host) // get new CiscoNameDevs struct
+	hstData, err := cnd.GetHostDataByHostName(ca.cisFileName, host) // get new CiscoNameDevs struct
 	if err != nil {
 		return retstr, err
 	}
@@ -54,7 +54,7 @@ func (a *CisAccount) GetIfaceByHost(host string) (string, error) {
 }
 
 // OneCisExecuteSsh - выполнить набор команд на одном хосте.
-func (a *CisAccount) OneCisExecuteSsh(hostName string, port int, cmds []string, connectTimeOut ...int) ([]string, error) {
+func (ca *CisAccount) OneCisExecuteSsh(hostName string, port int, cmds []string, connectTimeOut ...int) ([]string, error) {
 
 	// Приведем имя хоста к прописным буквам
 	hostName = strings.ToLower(strings.TrimSpace(hostName))
@@ -70,18 +70,18 @@ func (a *CisAccount) OneCisExecuteSsh(hostName string, port int, cmds []string, 
 	}
 
 	// Проверка на корректность
-	if !a.initated {
+	if !ca.initated {
 		return outs, errors.New("not create this struct by NewCisAccount func")
 	}
 
 	var cnd namedevs.CiscoNameDevs
 	// Запросим данные о хосте по  его имени
-	hstData, err := cnd.GetHostDataByHostName(a.cisFileName, hostName)
+	hstData, err := cnd.GetHostDataByHostName(ca.cisFileName, hostName)
 	if err != nil {
 		return outs, err
 	}
 	// Запрос данных для авторизации на хосте по имени группы
-	hstAccount, found := hostdata.GetHostAccountByGroupName(a.pwdFileName, hstData.Group)
+	hstAccount, found := hostdata.GetHostAccountByGroupName(ca.pwdFileName, hstData.Group)
 	if !found {
 		return outs, fmt.Errorf("error: not found account %s", hostName)
 	}
@@ -142,7 +142,7 @@ func (a *CisAccount) OneCisExecuteSsh(hostName string, port int, cmds []string, 
 }
 
 // MultiCisWithByGroupNameExecuteSsh - выполнить команды на группе хостов, в указанной группе
-func (a *CisAccount) MultiCisWithByGroupNameExecuteSsh(groupName string, port int, cmds []string, connectTimeOut ...int) ([][]string, error) {
+func (ca *CisAccount) MultiCisWithByGroupNameExecuteSsh(groupName string, port int, cmds []string, connectTimeOut ...int) ([][]string, error) {
 	var arrouts [][]string // Возвращаемый массив
 
 	// Если необязательный параметр не указан то будем использовать его
@@ -153,14 +153,14 @@ func (a *CisAccount) MultiCisWithByGroupNameExecuteSsh(groupName string, port in
 
 	var cnd namedevs.CiscoNameDevs
 	// Получаем список хостов что входят в указанную группу
-	hostgrps, err := cnd.GetHostsByGroupName(a.cisFileName, groupName)
+	hostgrps, err := cnd.GetHostsByGroupName(ca.cisFileName, groupName)
 	if err != nil {
 		return nil, err
 	}
 	// Выполняем команды одну за другой
 	for _, hsttorun := range hostgrps {
 		// Вызываем функцию выше
-		rethst, err := a.OneCisExecuteSsh(hsttorun, port, cmds, dialTimeout)
+		rethst, err := ca.OneCisExecuteSsh(hsttorun, port, cmds, dialTimeout)
 		if err != nil { // Если один их хостов например недоступен это не повод прерывать работу на остальных
 			// Вернем ошибку с именем хоста и что случилось
 			errstr := hsttorun + " : " + err.Error()
@@ -177,11 +177,11 @@ func (a *CisAccount) MultiCisWithByGroupNameExecuteSsh(groupName string, port in
 }
 
 // MultiCisExecuteSsh - выполнить набор команд на множестве хостов
-func (a *CisAccount) MultiCisExecuteSsh(hosts []string, port int, cmds []string) ([]string, error) {
+func (ca *CisAccount) MultiCisExecuteSsh(hosts []string, port int, cmds []string) ([]string, error) {
 
 	var arrouts []string // Возвращаемый массив
 	//
-	if !a.initated {
+	if !ca.initated {
 		return arrouts, errors.New("create this struct by New command")
 	}
 	if (port <= 0) || (port > 65534) {
@@ -191,7 +191,7 @@ func (a *CisAccount) MultiCisExecuteSsh(hosts []string, port int, cmds []string)
 	// Перебираем указанные хосты.
 	for _, host := range hosts {
 		// Для каждого хоста выполняем набор команд
-		rets, err := a.OneCisExecuteSsh(host, port, cmds)
+		rets, err := ca.OneCisExecuteSsh(host, port, cmds)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -217,3 +217,13 @@ func (a *CisAccount) GetTestGoups(groupName string) {
 
 }
 */
+
+// Вернуть массив всех хостов
+func (ca *CisAccount) GetHostsDataByHostName() ([]*namedevs.CiscoNameDevs, error) {
+	ret, err := namedevs.GetHostsDataByHostName(ca.cisFileName)
+	if err != nil {
+		return nil, err
+	}
+
+	return ret, nil
+}

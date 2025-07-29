@@ -33,7 +33,50 @@ func newCiscoNameDev(namedev string, group string, hostip string, hostextip stri
 
 type CiscoNameDevs CiscoNameDev
 
-func (c *CiscoNameDevs) GetHostDataByHostName(cisFileName string, hostName string) (*CiscoNameDev, error) {
+// TODO: Дописать и протестировать.
+// GetHostsDataByHostName - Вернуть список всех хостов и их данные в виде массива CiscoNameDev
+func GetHostsDataByHostName(cisFileName string) (ret []*CiscoNameDevs, err error) {
+	// Load hosts from config file.
+	ctx := context.Background()
+	hostsMap, hostsIpMap, err := loadHosts(ctx, cisFileName)
+	if err != nil {
+		return nil, errors.New("ошибка при чтении/парсинге файла " + cisFileName + " - " + err.Error())
+	}
+	//! Debug output
+	fmt.Println(hostsMap)
+	fmt.Println(hostsIpMap)
+	// TODO - дописать и придумать как тестировать
+	// Создадим массив всех хостов
+	allHosts := make([]string, len(hostsMap))
+	if len(allHosts) == 0 {
+		return ret, errors.New("не найдено ни одного хоста")
+	}
+	i := 0
+	for k := range hostsMap {
+		allHosts[i] = k
+		i++
+	}
+	// Перебираем все хосты
+	for _, host := range allHosts {
+		fmt.Println(host)
+		_hostIpData, ok := hostsIpMap[host]
+		if ok {
+			_hostIp, ok := hostsIpMap[host]["hostname"]
+			if !ok {
+				return nil, errors.New("IP хоста не найдено для" + host)
+			}
+			fmt.Println("HostIpData", _hostIpData)
+			fmt.Println("HostIp:", _hostIp)
+
+			//nd := newCiscoNameDev(host, hostsMap[host][0], hostIpData[host]["hostname"], hostIpData[""])
+		}
+	}
+
+	return nil, nil
+}
+
+// Вернуть данные одного хоста по его имени.
+func (cnd *CiscoNameDevs) GetHostDataByHostName(cisFileName string, hostName string) (*CiscoNameDev, error) {
 
 	ctx := context.Background()
 	// Load hosts from config file.
@@ -49,10 +92,10 @@ func (c *CiscoNameDevs) GetHostDataByHostName(cisFileName string, hostName strin
 		return nil, errors.New("хост не найден в группе")
 	}
 
-	hostIpData, ok := hostsIpMap[hostName]
+	hostIpDataMap, ok := hostsIpMap[hostName]
 	if !ok {
 		//fmt.Println("IP хоста не найдено")
-		return nil, errors.New("IP хоста не найдено")
+		return nil, errors.New("данных об IP хоста не найдено")
 	} //else {
 	// Заполняем ответ дополнительными IP.
 	//hipd := NewHostIpData(hostIpData["hoost_e"], hostIpData["hoost_e2"], hostIpData["hoost_t1"], hostIpData["hoost_t2"])
@@ -70,11 +113,11 @@ func (c *CiscoNameDevs) GetHostDataByHostName(cisFileName string, hostName strin
 
 	// test debug output
 	//fmt.Printf("Группы для хоста %s: %v\n", hostName, hostGroups)
-	if len(hostGroups) <= 0 {
+	if len(hostGroups) == 0 {
 		return nil, errors.New("группа для хоcта не найдена")
 	}
-
-	ret := newCiscoNameDev(hostName, hostGroups[0], hostIp, hostIpData["hoost_e"], "-none-")
+	// TODO - берется только первая группа. Нужно пересмотреть.
+	ret := newCiscoNameDev(hostName, hostGroups[0], hostIp, hostIpDataMap["hoost_e"], "-none-")
 
 	//fmt.Println(ret)
 	return ret, nil
@@ -121,13 +164,13 @@ func findHostsInGroup(hostsByGroup map[string][]string, groupName string) []stri
 }
 
 // GetHostsByGroupName - получить список хостов относящийся к заданной группе
-func (c *CiscoNameDevs) GetHostsByGroupName(cisFileName string, grpName string) ([]string, error) {
+func (cnd *CiscoNameDevs) GetHostsByGroupName(cisFileName string, grpName string) ([]string, error) {
 
 	ctx := context.Background()
 	// Load hosts from config file.
 	hostsMap, _, err := loadHosts(ctx, cisFileName)
 	if err != nil {
-		return nil, errors.New("Ошибка при чтении/парсинге файла groups.yaml" + err.Error() + " " + cisFileName)
+		return nil, errors.New("ошибка при чтении/парсинге файла groups.yaml" + err.Error() + " " + cisFileName)
 	}
 	/*
 		// Получаем список всех ключей из карты - получим сртслк самих хостов.
