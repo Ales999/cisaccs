@@ -219,7 +219,7 @@ func (a *CisAccount) GetTestGoups(groupName string) {
 */
 
 // Вернуть массив всех хостов
-func (ca *CisAccount) GetHostsDataByHostName() ([]*namedevs.CiscoNameDevs, error) {
+func (ca *CisAccount) GetHostsDataByHostName() ([]*namedevs.CiscoNameDev, error) {
 	ret, err := namedevs.GetHostsDataByHostName(ca.cisFileName)
 	if err != nil {
 		return nil, err

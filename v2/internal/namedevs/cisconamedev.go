@@ -13,15 +13,15 @@ import (
 //
 // PS: Кроме данных с именами и паролем
 type CiscoNameDev struct {
-	NameDev   string // Имя узла (hostname)
-	Group     string // Имя Группы.
-	HostIp    string // Ip данного узла (management).
-	HostExtIp string // Внешний IP
-	Iface     string // Имя интерфейса которым подключен у вышестояшего коммутатора, если есть.
+	NameDev   string   // Имя узла (hostname)
+	Group     string   // Имя Группы.
+	HostIp    string   // Ip данного узла (management).
+	HostExtIp []string // Внешний IP
+	Iface     string   // Имя интерфейса которым подключен у вышестояшего коммутатора, если есть.
 }
 
 // newCiscoNameDev  - вернуть ссылку на новый экземпляр структуры
-func newCiscoNameDev(namedev string, group string, hostip string, hostextip string, iface string) *CiscoNameDev {
+func newCiscoNameDev(namedev string, group string, hostip string, hostextip []string, iface string) *CiscoNameDev {
 	return &CiscoNameDev{
 		NameDev:   namedev,
 		Group:     group,
@@ -35,46 +35,70 @@ type CiscoNameDevs CiscoNameDev
 
 // TODO: Дописать и протестировать.
 // GetHostsDataByHostName - Вернуть список всех хостов и их данные в виде массива CiscoNameDev
-func GetHostsDataByHostName(cisFileName string) (ret []*CiscoNameDevs, err error) {
+func GetHostsDataByHostName(cisFileName string) (ret []*CiscoNameDev, err error) {
+
 	// Load hosts from config file.
 	ctx := context.Background()
-	hostsMap, hostsIpMap, err := loadHosts(ctx, cisFileName)
+	hostsMaps, hostsIpMap, err := loadHosts(ctx, cisFileName)
 	if err != nil {
 		return nil, errors.New("ошибка при чтении/парсинге файла " + cisFileName + " - " + err.Error())
 	}
-	//! Debug output
-	fmt.Println(hostsMap)
-	fmt.Println(hostsIpMap)
-	// TODO - дописать и придумать как тестировать
-	// Создадим массив всех хостов
-	allHosts := make([]string, len(hostsMap))
-	if len(allHosts) == 0 {
-		return ret, errors.New("не найдено ни одного хоста")
+	if len(hostsMaps) == 0 {
+		return ret, errors.New("не найдено ни одного хоста при загрузке файла")
 	}
+
+	//! Debug output
+	//fmt.Println(hostsMap)
+	//fmt.Println(hostsIpMap)
+
+	// TODO - дописать и придумать как тестировать
+	// Создадим пустой массив всех хостов
+	allHosts := make([]string, len(hostsMaps))
+	// Заполняем массив названиями хостов из мапы hostsMap
 	i := 0
-	for k := range hostsMap {
+	for k := range hostsMaps {
 		allHosts[i] = k
 		i++
 	}
 	// Перебираем все хосты
 	for _, host := range allHosts {
-		fmt.Println(host)
+		//fmt.Println(host)
 		_hostIpData, ok := hostsIpMap[host]
+
 		if ok {
-			_hostIp, ok := hostsIpMap[host]["hostname"]
+			_hostIp, ok := _hostIpData["hostname"]
 			if !ok {
-				return nil, errors.New("IP хоста не найдено для" + host)
+				return nil, errors.New("IP хоста не найдено для " + host)
 			}
-			fmt.Println("HostIpData", _hostIpData)
-			fmt.Println("HostIp:", _hostIp)
+			var _hostGroup string
+			_hostGroups, ok := hostsMaps[host]
+			if ok {
+				_hostGroup = _hostGroups[0]
+			}
+
+			var hoosts_extip []string
+			_hostE1, ok := _hostIpData["hoost_e"]
+			if ok {
+				hoosts_extip = append(hoosts_extip, _hostE1)
+			}
+			_hostE2, ok := _hostIpData["hoost_e2"]
+			if ok {
+				hoosts_extip = append(hoosts_extip, _hostE2)
+			}
+
+			//fmt.Println("HostIpData", _hostIpData)
+			//fmt.Println("HostIp:", _hostIp)
 
 			//nd := newCiscoNameDev(host, hostsMap[host][0], hostIpData[host]["hostname"], hostIpData[""])
+			hd := newCiscoNameDev(host, _hostGroup, _hostIp, hoosts_extip, "")
+			ret = append(ret, hd)
 		}
 	}
 
-	return nil, nil
+	return ret, nil
 }
 
+// TODO: Это совсем другой тип!
 // Вернуть данные одного хоста по его имени.
 func (cnd *CiscoNameDevs) GetHostDataByHostName(cisFileName string, hostName string) (*CiscoNameDev, error) {
 
@@ -117,7 +141,10 @@ func (cnd *CiscoNameDevs) GetHostDataByHostName(cisFileName string, hostName str
 		return nil, errors.New("группа для хоcта не найдена")
 	}
 	// TODO - берется только первая группа. Нужно пересмотреть.
-	ret := newCiscoNameDev(hostName, hostGroups[0], hostIp, hostIpDataMap["hoost_e"], "-none-")
+	var hostsips []string
+	hostsips = append(hostsips, hostIpDataMap["hoost_e"])
+	//hostsips := []{hostIpDataMap["hoost_e"]}
+	ret := newCiscoNameDev(hostName, hostGroups[0], hostIp, hostsips, "-none-")
 
 	//fmt.Println(ret)
 	return ret, nil
@@ -299,10 +326,10 @@ func loadHosts(ctx context.Context, filePath string) (hostsMap map[string][]stri
 								if len(dataLine) > 0 && !strings.HasPrefix(strings.TrimLeft(dataLine, " "), "#") {
 									if strings.HasPrefix(strings.TrimLeft(dataLine, " "), "hoost") {
 										_line := strings.TrimLeft(dataLine, " ")
-										if strings.Contains(_line, "hoost_e") {
-											hostsIpMap[currentHost]["hoost_e"] = extractValue(_line)
-										} else if strings.Contains(_line, "hoost_e2") {
+										if strings.Contains(_line, "hoost_e2") {
 											hostsIpMap[currentHost]["hoost_e2"] = extractValue(_line)
+										} else if strings.Contains(_line, "hoost_e") {
+											hostsIpMap[currentHost]["hoost_e"] = extractValue(_line)
 										} else if strings.Contains(_line, "hoost_t1") {
 											hostsIpMap[currentHost]["hoost_t1"] = extractValue(_line)
 										} else if strings.Contains(_line, "hoost_t2") {
