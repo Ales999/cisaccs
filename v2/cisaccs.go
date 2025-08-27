@@ -218,12 +218,21 @@ func (a *CisAccount) GetTestGoups(groupName string) {
 }
 */
 
+type CND namedevs.CiscoNameDev // Тип аналогичный внутреннему типу CiscoNameDev
+
 // Вернуть массив всех хостов
-func (ca *CisAccount) GetHostsDataByHostName() ([]*namedevs.CiscoNameDev, error) {
-	ret, err := namedevs.GetHostsDataByHostName(ca.cisFileName)
+func (ca *CisAccount) GetHostsDataByHostName() ([]*CND, error) {
+	// Загрузить и вернуть все хосты и их IP.
+	hostsData, err := namedevs.GetHostsDataByHostName(ca.cisFileName)
 	if err != nil {
 		return nil, err
 	}
+	// Создадим в памяти массив для возврата данных хостов.
+	result := make([]*CND, len(hostsData))
+	// Конвертируем в публичный тип CND
+	for i, item := range hostsData {
+		result[i] = (*CND)(item)
+	}
 
-	return ret, nil
+	return result, nil
 }
