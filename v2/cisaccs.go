@@ -236,3 +236,33 @@ func (ca *CisAccount) GetHostsDataByHostName() ([]*CND, error) {
 
 	return result, nil
 }
+
+/*
+// Структура содержит явки/пароли
+type HostData struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Secret   string `json:"secret"`
+}
+*/
+
+type HDP hostdata.HostData
+
+func newHostData(hd hostdata.HostData) HDP {
+	return HDP{
+		Username: hd.Username,
+		Password: hd.Password,
+		Secret:   hd.Secret,
+	}
+}
+
+// GetHostDataByGroupName - вернуть данные для подключения из CT по имени группы в которой находится хост.
+func (ca *CisAccount) GetHostDataByGroupName(groupName string) (HDP, bool) {
+
+	hd, ok := hostdata.GetHostAccountByGroupName(ca.pwdFileName, groupName)
+	if ok {
+		return newHostData(hd), true
+	}
+
+	return HDP{}, false
+}

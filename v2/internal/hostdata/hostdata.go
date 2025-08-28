@@ -120,42 +120,11 @@ func getHostAccount(fileName string, groupName string) (HostData, error) {
 	allGroups = append(allGroups, groupName)
 
 	// Заполняем карту данных по группам.
-	resp := GetHostDataInfo(fileName, allGroups, hdms)
+	hostDataInfo := GetHostDataInfo(fileName, allGroups, hdms)
 
-	//fmt.Println("------------------")
-	// Выводим тестовую инфомацию
-	//fmt.Println(resp)
-	//fmt.Println("------------------")
-
-	hostdata.Username = resp.UserName
-	hostdata.Password = resp.Password
-	hostdata.Secret = resp.EnablePwd
-
-	/*
-		// Открываем файл как byte[]
-		fileData, err := os.ReadFile(fileName)
-		if err != nil {
-			log.Println(err)
-			return nil, err
-		}
-
-		var objmap map[string]json.RawMessage
-
-		err = json.Unmarshal(fileData, &objmap)
-		if err != nil {
-			log.Println(err)
-			return nil, err
-		}
-
-		for key := range objmap {
-			var hd HostData
-			err = json.Unmarshal(objmap[key], &hd)
-			if err != nil {
-				return nil, err
-			}
-			hostDataMap[key] = hd
-		}
-	*/
+	hostdata.Username = hostDataInfo.UserName
+	hostdata.Password = hostDataInfo.Password
+	hostdata.Secret = hostDataInfo.EnablePwd
 
 	return hostdata, nil
 
@@ -310,7 +279,7 @@ func GetHostDataInfo(hostName string, hostGroups []string, groupsMap map[string]
 						}
 					}
 				} //else if !ok {
-					//fmt.Printf("Ключ %s не найден в группе %s\n", key, groupName)
+				//fmt.Printf("Ключ %s не найден в группе %s\n", key, groupName)
 				//}
 			}
 
