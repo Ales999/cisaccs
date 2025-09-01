@@ -237,6 +237,7 @@ func (ca *CisAccount) GetHostsDataByHostName() ([]*CND, error) {
 	return result, nil
 }
 
+/*
 type HDP hostdata.HostData
 
 func newHostData(hd hostdata.HostData) HDP {
@@ -246,32 +247,26 @@ func newHostData(hd hostdata.HostData) HDP {
 		Secret:   hd.Secret,
 	}
 }
+*/
 
-// GetHostDataByGroupName - вернуть данные для подключения из CT по имени группы в которой находится хост.
-//
-// ! Опасно так открыто выставлять по идее !
-// TODO: Подумать - а надо-ли!?
-func (ca *CisAccount) GetHostDataByGroupName(groupName string) (HDP, bool) {
+// Проверить что такая группа сушествует для подключения хостов и есть данные для подключения.
+func (ca *CisAccount) HostByGroupExists(groupName string) bool {
 
-	hd, ok := hostdata.GetHostAccountByGroupName(ca.pwdFileName, groupName)
-	if ok {
-		return newHostData(hd), true
-	}
+	_, ret := hostdata.GetHostAccountByGroupName(ca.pwdFileName, groupName)
 
-	return HDP{}, false
+	return ret
 }
 
 // OneCisExecuteSshStepByStep - тестовая версия --> выполнить набор команд на одном хосте,
 // вывести вывод команд в консоль и вернуть все вместе.
-func (ca *CisAccount) OneCisExecuteSshStepByStep(hostName string, port int, cmds []string, flagUseCiscoWrire bool, connectTimeOut ...int) ([]string, error) {
+func (ca *CisAccount) OneCisExecuteSshStepByStep(hostName string, port int, cmds []string, flagUseCiscoWrire bool, connectTimeOut ...int) error {
 
 	// Приведем имя хоста к прописным буквам
 	hostName = strings.ToLower(strings.TrimSpace(hostName))
 	if len(hostName) == 0 {
-		return nil, errors.New("host name is empty")
+		return errors.New("host name is empty")
 	}
 
-	var outs []string // результат работы выполнения на cisco
 	// Если необязательный параметр не указан то будем использовать его
 	var dialTimeout = 30
 	if len(connectTimeOut) > 0 {
@@ -280,19 +275,19 @@ func (ca *CisAccount) OneCisExecuteSshStepByStep(hostName string, port int, cmds
 
 	// Проверка на корректность
 	if !ca.initated {
-		return outs, errors.New("not create this struct by NewCisAccount func")
+		return errors.New("not create this struct by NewCisAccount func")
 	}
 
 	var cnd namedevs.CiscoNameDevs
 	// Запросим данные о хосте по  его имени
 	hstData, err := cnd.GetHostDataByHostName(ca.cisFileName, hostName)
 	if err != nil {
-		return outs, err
+		return err
 	}
 	// Запрос данных для авторизации на хосте по имени группы
 	hstAccount, found := hostdata.GetHostAccountByGroupName(ca.pwdFileName, hstData.Group)
 	if !found {
-		return outs, fmt.Errorf("error: not found account %s", hostName)
+		return fmt.Errorf("error: not found account %s", hostName)
 	}
 
 	// Debug print account info
@@ -309,14 +304,14 @@ func (ca *CisAccount) OneCisExecuteSshStepByStep(hostName string, port int, cmds
 		netrasp.WithInsecureIgnoreHostKey(),
 	)
 	if err != nil {
-		return outs, fmt.Errorf("unable to init config: %v", err)
+		return fmt.Errorf("unable to init config: %v", err)
 	}
 	ctx, cancelOpen := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelOpen()
 
 	err = device.Dial(ctx)
 	if err != nil {
-		return outs, fmt.Errorf("unable to connect: %v", err)
+		return fmt.Errorf("unable to connect: %v", err)
 	}
 	defer device.Close(context.Background())
 
@@ -326,7 +321,7 @@ func (ca *CisAccount) OneCisExecuteSshStepByStep(hostName string, port int, cmds
 	// TODO: If user is privilege 15 - not need enable
 	err = device.Enable(ctxEnbl)
 	if err != nil {
-		return outs, fmt.Errorf("unable to Enable command: %v", err)
+		return fmt.Errorf("unable to Enable command: %v", err)
 	}
 
 	ctx, cancelRun := context.WithTimeout(context.Background(), 60*time.Second)
@@ -342,14 +337,13 @@ func (ca *CisAccount) OneCisExecuteSshStepByStep(hostName string, port int, cmds
 
 	for _, sendCommand := range cmds {
 		sendCommand = strings.TrimLeft(sendCommand, " ")
-		outs = append(outs, sm+sendCommand)
+		fmt.Println(sm + sendCommand)
 		output, err := device.Run(ctx, sendCommand)
 		if err != nil {
-			fmt.Printf("unable to run command: %v\n", err)
+			fmt.Printf("unable to run command %s: %v\n", sendCommand, err)
 			continue
 		}
-		multiouts := utils.ConvMultiStrToArrayStr(output)
-		outs = append(outs, multiouts...)
+		fmt.Print(output)
 	}
 	// Сохраняем конфигурацию если надо, после всех комманд
 	if flagUseCiscoWrire {
@@ -364,9 +358,8 @@ func (ca *CisAccount) OneCisExecuteSshStepByStep(hostName string, port int, cmds
 	// Закрывем сессию.
 	ctxExit, cancelExit := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancelExit()
-	device.Run(ctxExit, "exit")
-
+	_, _ = device.Run(ctxExit, "exit")
 	device.Close(ctx)
 
-	return outs, nil
+	return nil
 }
