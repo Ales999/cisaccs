@@ -84,7 +84,8 @@ func (ca *CisAccount) OneCisExecuteSsh(hostName string, port int, cmds []string,
 	}
 
 	var cnd namedevs.CiscoNameDevs
-	if ca.cnd == nil {
+	// Если имя устройства не совпадает с именем в кеше то запросим ещё раз.
+	if ca.cnd == nil || !strings.EqualFold(ca.cnd.NameDev, hostName) {
 		// Запросим данные о хосте по  его имени
 		hstData, err := cnd.GetHostDataByHostName(ca.cisFileName, hostName)
 		if err != nil {
