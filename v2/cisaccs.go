@@ -24,8 +24,15 @@ type CisAccount struct {
 	initated    bool   // Инициализировано через New(...)
 	cisFileName string // Файл с именами хостов, с указанием группы (hosts.yaml)
 	pwdFileName string // Файл с акаунтами и паролями, по группам (groups.yaml)
+	cnd         *namedevs.CiscoNameDevs
 }
 
+// NewCisAccount - Создать новый объект.
+//
+// @Parameters:
+//
+//	cisFileName - Имя файла с именами хостов, с указанием группы и IP (hosts.yaml).
+//	pwdFileName - Имя файла с описанием учетных данных для подключения к устройствам, привязанных к группам (groups.yaml).
 func NewCisAccount(cisFileName string, pwdFileName string) *CisAccount {
 
 	return &CisAccount{
@@ -45,12 +52,14 @@ func (ca *CisAccount) GetIfaceByHost(host string) (string, error) {
 	}
 
 	var cnd namedevs.CiscoNameDevs
-
-	hstData, err := cnd.GetHostDataByHostName(ca.cisFileName, host) // get new CiscoNameDevs struct
-	if err != nil {
-		return retstr, err
+	if ca.cnd == nil {
+		hstData, err := cnd.GetHostDataByHostName(ca.cisFileName, host) // get new CiscoNameDevs struct
+		if err != nil {
+			return retstr, err
+		}
+		ca.cnd = (*namedevs.CiscoNameDevs)(hstData)
 	}
-	return hstData.Iface, nil
+	return ca.cnd.Iface, nil
 }
 
 // OneCisExecuteSsh - выполнить набор команд на одном хосте.
@@ -75,24 +84,27 @@ func (ca *CisAccount) OneCisExecuteSsh(hostName string, port int, cmds []string,
 	}
 
 	var cnd namedevs.CiscoNameDevs
-	// Запросим данные о хосте по  его имени
-	hstData, err := cnd.GetHostDataByHostName(ca.cisFileName, hostName)
-	if err != nil {
-		return outs, err
+	if ca.cnd == nil {
+		// Запросим данные о хосте по  его имени
+		hstData, err := cnd.GetHostDataByHostName(ca.cisFileName, hostName)
+		if err != nil {
+			return outs, err
+		}
+		ca.cnd = (*namedevs.CiscoNameDevs)(hstData)
 	}
 	// Запрос данных для авторизации на хосте по имени группы
-	hstAccount, found := hostdata.GetHostAccountByGroupName(ca.pwdFileName, hstData.Group)
+	hstAccount, found := hostdata.GetHostAccountByGroupName(ca.pwdFileName, ca.cnd.Group)
 	if !found {
 		return outs, fmt.Errorf("error: not found account %s", hostName)
 	}
 
 	// Debug print account info
 	if cisDebug {
-		fmt.Printf("!Connect to host: %s (%v)", hostName, hstData.HostIp)
+		fmt.Printf("!Connect to host: %s (%v)", hostName, ca.cnd.HostIp)
 	}
 
 	// Настройка и подключение.
-	device, err := netrasp.New(hstData.HostIp,
+	device, err := netrasp.New(ca.cnd.HostIp,
 		netrasp.WithDriver("ios"),
 		netrasp.WithSSHPort(port),
 		netrasp.WithDialTimeout(time.Duration(dialTimeout)*time.Second),

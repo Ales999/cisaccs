@@ -70,9 +70,11 @@ func GetHostsDataByHostName(cisFileName string) (ret []*CiscoNameDev, err error)
 			if !ok {
 				return nil, errors.New("IP хоста не найдено для " + host)
 			}
+			// TODO - Тут берется только первая группа, - а как все получить (а надо-ли тут?)
 			var _hostGroup string
 			_hostGroups, ok := hostsMaps[host]
 			if ok {
+				// ! Вероятно это плохой вариант брать только первый элемент - надо проверить что тут в итоге в реальности.
 				_hostGroup = _hostGroups[0]
 			}
 
@@ -98,15 +100,16 @@ func GetHostsDataByHostName(cisFileName string) (ret []*CiscoNameDev, err error)
 	return ret, nil
 }
 
+// GetHostDataByHostName - Вернуть данные одного хоста по его имени.
+//
 // TODO: Это совсем другой тип!
-// Вернуть данные одного хоста по его имени.
 func (cnd *CiscoNameDevs) GetHostDataByHostName(cisFileName string, hostName string) (*CiscoNameDev, error) {
 
 	ctx := context.Background()
 	// Load hosts from config file.
 	hostsMap, hostsIpMap, err := loadHosts(ctx, cisFileName)
 	if err != nil {
-		return nil, errors.New("Ошибка при чтении/парсинге файла groups.yaml" + err.Error() + " " + cisFileName)
+		return nil, errors.New("Ошибка при чтении/парсинге файла " + cisFileName + " : " + err.Error())
 	}
 	//info := GetHostInfo(hostName)
 
@@ -199,15 +202,7 @@ func (cnd *CiscoNameDevs) GetHostsByGroupName(cisFileName string, grpName string
 	if err != nil {
 		return nil, errors.New("ошибка при чтении/парсинге файла groups.yaml" + err.Error() + " " + cisFileName)
 	}
-	/*
-		// Получаем список всех ключей из карты - получим сртслк самих хостов.
-		allHosts := make([]string, len(hostsMap))
-		i := 0
-		for k := range hostsMap {
-			allHosts[i] = k
-			i++
-		}
-	*/
+
 	// Получаем список всех ключей из карты
 	hosts := findHostsInGroup(hostsMap, grpName)
 	if len(hosts) == 0 {
@@ -223,12 +218,13 @@ func (cnd *CiscoNameDevs) GetHostsByGroupName(cisFileName string, grpName string
 //var hostsMap = make(map[string][]string)
 //var hostsIpMap = make(map[string]map[string]string)
 
-func loadHosts(ctx context.Context, filePath string) (hostsMap map[string][]string, hostsIpMap map[string]map[string]string, err error) {
+// loadHosts - Загрузка данных из файла hosts.yaml и парсинг нестандартного формата YAML.
+func loadHosts(ctx context.Context, cisFileName string) (hostsMap map[string][]string, hostsIpMap map[string]map[string]string, err error) {
 
 	hostsMap = make(map[string][]string)
 	hostsIpMap = make(map[string]map[string]string)
 
-	file, err := os.Open(filePath)
+	file, err := os.Open(cisFileName)
 	if err != nil {
 		return nil, nil, err
 	}
