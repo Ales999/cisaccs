@@ -1,11 +1,11 @@
 module github.com/ales999/cisaccs
 
 // go-git supports the last 3 stable Go versions.
-go 1.24.0
+go 1.25.3
 
 require (
 	github.com/knadh/koanf/parsers/yaml v1.1.0
-	golang.org/x/crypto v0.41.0
+	golang.org/x/crypto v0.43.0
 )
 
 require (
@@ -19,6 +19,6 @@ require (
 
 require (
 	github.com/knadh/koanf/providers/file v1.2.0
-	github.com/knadh/koanf/v2 v2.2.2
-	golang.org/x/sys v0.35.0 // indirect
+	github.com/knadh/koanf/v2 v2.3.0
+	golang.org/x/sys v0.37.0 // indirect
 )
