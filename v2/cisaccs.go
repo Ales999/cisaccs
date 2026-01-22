@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -272,44 +273,51 @@ func (ca *CisAccount) HostByGroupExists(groupName string) bool {
 
 // OneCisExecuteSshStepByStep - тестовая версия --> выполнить набор команд на одном хосте,
 // вывести вывод команд в консоль и вернуть все вместе.
-func (ca *CisAccount) OneCisExecuteSshStepByStep(hostName string, port int, cmds []string, flagUseCiscoWrire bool, connectTimeOut ...int) error {
-
-	// Приведем имя хоста к прописным буквам
+func (ca *CisAccount) OneCisExecuteSshStepByStep(
+	hostName string,
+	port int,
+	cmds []string,
+	flagUseCiscoWrire bool,
+	connectTimeOut ...int,
+) error {
+	// Приведение имени хоста к нижнему регистру и проверка на пустоту
 	hostName = strings.ToLower(strings.TrimSpace(hostName))
 	if len(hostName) == 0 {
 		return errors.New("host name is empty")
 	}
 
-	// Если необязательный параметр не указан то будем использовать его
+	// Проверка порта
+	if port <= 0 || port > 65535 {
+		return errors.New("invalid port")
+	}
+
+	// Установка таймаута подключения
 	var dialTimeout = 30
 	if len(connectTimeOut) > 0 {
 		dialTimeout = connectTimeOut[0]
 	}
 
-	// Проверка на корректность
+	// Проверка инициализации структуры
 	if !ca.initated {
-		return errors.New("not create this struct by NewCisAccount func")
+		return errors.New("not created this struct by NewCisAccount func")
 	}
 
+	// Получение данных о хосте
 	var cnd namedevs.CiscoNameDevs
-	// Запросим данные о хосте по  его имени
 	hstData, err := cnd.GetHostDataByHostName(ca.cisFileName, hostName)
 	if err != nil {
 		return err
 	}
-	// Запрос данных для авторизации на хосте по имени группы
+
+	// Получение учётных данных
 	hstAccount, found := hostdata.GetHostAccountByGroupName(ca.pwdFileName, hstData.Group)
 	if !found {
 		return fmt.Errorf("error: not found account %s", hostName)
 	}
 
-	// Debug print account info
-	if cisDebug {
-		fmt.Printf("!Connect to host: %s (%v)", hostName, hstData.HostIp)
-	}
-
-	// Настройка и подключение.
-	device, err := netrasp.New(hstData.HostIp,
+	// Настройка и подключение
+	device, err := netrasp.New(
+		hstData.HostIp,
 		netrasp.WithDriver("ios"),
 		netrasp.WithSSHPort(port),
 		netrasp.WithDialTimeout(time.Duration(dialTimeout)*time.Second),
@@ -319,60 +327,64 @@ func (ca *CisAccount) OneCisExecuteSshStepByStep(hostName string, port int, cmds
 	if err != nil {
 		return fmt.Errorf("unable to init config: %v", err)
 	}
-	ctx, cancelOpen := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancelOpen()
-
-	err = device.Dial(ctx)
-	if err != nil {
-		return fmt.Errorf("unable to connect: %v", err)
-	}
 	defer device.Close(context.Background())
 
-	ctxEnbl, cancelEnable := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancelEnable()
+	// Диалог с устройством
+	ctx, cancelOpen := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelOpen()
+	if err := device.Dial(ctx); err != nil {
+		return fmt.Errorf("unable to connect: %v", err)
+	}
 
-	// TODO: If user is privilege 15 - not need enable
-	err = device.Enable(ctxEnbl)
-	if err != nil {
+	// Включение режима enable
+	ctxEnbl, cancelEnable := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelEnable()
+	if err := device.Enable(ctxEnbl); err != nil {
 		return fmt.Errorf("unable to Enable command: %v", err)
 	}
 
-	ctx, cancelRun := context.WithTimeout(context.Background(), 60*time.Second)
+	// Выполнение команд
+	ctxRun, cancelRun := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancelRun()
-	/*
-		if CisDebug {
-			fmt.Println(" - Done")
-		}
-	*/
-	fmt.Println("--------------------------------------------------")
-	smNum := len(hostName) + 18
-	sm := strings.Repeat(" ", smNum)
 
-	for _, sendCommand := range cmds {
-		sendCommand = strings.TrimLeft(sendCommand, " ")
-		fmt.Println(sm + sendCommand)
-		output, err := device.Run(ctx, sendCommand)
-		if err != nil {
-			fmt.Printf("unable to run command %s: %v\n", sendCommand, err)
-			continue
+	if len(cmds) > 0 {
+		fmt.Println("--------------------------------------------------")
+		smNum := len(hostName) + 18
+		sm := strings.Repeat(" ", smNum)
+
+		for _, sendCommand := range cmds {
+			sendCommand = strings.TrimLeft(sendCommand, " ")
+			fmt.Println(sm + sendCommand)
+			output, err := device.Run(ctxRun, sendCommand)
+			if err != nil {
+				fmt.Printf("unable to run command %s: %v\n", sendCommand, err)
+				continue
+			}
+			fmt.Print(output)
 		}
-		fmt.Print(output)
 	}
-	// Сохраняем конфигурацию если надо, после всех комманд
+
+	// Сохранение конфигурации (если нужно)
 	if flagUseCiscoWrire {
-		fmt.Print("Выполняю сохранение конфигурации на самой cisco ...")
-		_, err = device.Run(ctx, "wr mem")
+		fmt.Print("Выполняю сохранение конфигурации на самой cisco...")
+		_, err = device.Run(ctxRun, "wr mem")
 		if err != nil {
-			fmt.Printf("\nError: unable to run command wr mem:  %v\n", err)
-		} else {
-			fmt.Println(" - Выполнено.")
+			fmt.Printf("\nError: unable to run command wr mem: %v\n", err)
+			return fmt.Errorf("unable to save config: %v", err)
 		}
+		fmt.Println(" - Выполнено.")
 	}
-	// Закрывем сессию.
+
+	// Выход из сессии
 	ctxExit, cancelExit := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancelExit()
-	_, _ = device.Run(ctxExit, "exit")
-	device.Close(ctx)
+	if _, err := device.Run(ctxExit, "exit"); err != nil {
+		if errors.Is(err, net.ErrClosed) {
+			fmt.Printf("unable to closed session: %v\n", err)
+		}
+	}
+
+	fmt.Println("Выход из сессии выполнен")
 
 	return nil
 }
