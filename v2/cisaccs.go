@@ -330,7 +330,7 @@ func (ca *CisAccount) OneCisExecuteSshStepByStep(
 	defer device.Close(context.Background())
 
 	// Диалог с устройством
-	ctx, cancelOpen := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancelOpen := context.WithTimeout(context.Background(), time.Duration(dialTimeout)*time.Second+5*time.Second)
 	defer cancelOpen()
 	if err := device.Dial(ctx); err != nil {
 		return fmt.Errorf("unable to connect: %v", err)
@@ -344,7 +344,7 @@ func (ca *CisAccount) OneCisExecuteSshStepByStep(
 	}
 
 	// Выполнение команд
-	ctxRun, cancelRun := context.WithTimeout(context.Background(), 120*time.Second)
+	ctxRun, cancelRun := context.WithTimeout(context.Background(), 180*time.Second)
 	defer cancelRun()
 
 	if len(cmds) > 0 {
@@ -360,7 +360,10 @@ func (ca *CisAccount) OneCisExecuteSshStepByStep(
 				fmt.Printf("unable to run command %s: %v\n", sendCommand, err)
 				continue
 			}
-			fmt.Print(output)
+			// Вывод результата команды, если она есть.
+			if len(strings.TrimSpace(output)) > 0 {
+				fmt.Print(output)
+			}
 		}
 	}
 
@@ -376,15 +379,13 @@ func (ca *CisAccount) OneCisExecuteSshStepByStep(
 	}
 
 	// Выход из сессии
-	ctxExit, cancelExit := context.WithTimeout(context.Background(), 3*time.Second)
+	ctxExit, cancelExit := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelExit()
 	if _, err := device.Run(ctxExit, "exit"); err != nil {
 		if errors.Is(err, net.ErrClosed) {
 			fmt.Printf("unable to closed session: %v\n", err)
 		}
 	}
-
-	fmt.Println("Выход из сессии выполнен")
 
 	return nil
 }
