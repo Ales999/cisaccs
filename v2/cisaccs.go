@@ -391,10 +391,8 @@ func (ca *CisAccount) OneCisExecuteSshStepByStep(
 	return nil
 }
 
-// With io.Writer
-
-// OneCisExecuteSshStepByStep - тестовая версия --> выполнить набор команд на одном хосте,
-// вывести вывод команд в консоль и вернуть все вместе.
+// ExecuteSshWithWriter - тестовая версия --> выполнить набор команд на одном хосте,
+// и вывести вывод команд io.Writer.
 func (ca *CisAccount) ExecuteSshWithWriter(
 	hostName string,
 	port int,
