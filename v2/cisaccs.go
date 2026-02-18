@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"strings"
 	"time"
@@ -384,6 +385,126 @@ func (ca *CisAccount) OneCisExecuteSshStepByStep(
 	if _, err := device.Run(ctxExit, "exit"); err != nil {
 		if errors.Is(err, net.ErrClosed) {
 			fmt.Printf("unable to closed session: %v\n", err)
+		}
+	}
+
+	return nil
+}
+
+// With io.Writer
+
+// OneCisExecuteSshStepByStep - тестовая версия --> выполнить набор команд на одном хосте,
+// вывести вывод команд в консоль и вернуть все вместе.
+func (ca *CisAccount) ExecuteSshWithWriter(
+	hostName string,
+	port int,
+	cmds []string,
+	flagUseCiscoWrire bool,
+	dialTimeout int,
+	outputWriter io.Writer,
+) error {
+	// Приведение имени хоста к нижнему регистру и проверка на пустоту
+	hostName = strings.ToLower(strings.TrimSpace(hostName))
+	if len(hostName) == 0 {
+		return errors.New("host name is empty")
+	}
+
+	// Проверка порта
+	if port <= 0 || port > 65535 {
+		return errors.New("invalid port")
+	}
+
+	// Проверка инициализации структуры
+	if !ca.initated {
+		return errors.New("not created this struct by NewCisAccount func")
+	}
+
+	// Получение данных о хосте
+	var cnd namedevs.CiscoNameDevs
+	hstData, err := cnd.GetHostDataByHostName(ca.cisFileName, hostName)
+	if err != nil {
+		return err
+	}
+
+	// Получение учётных данных
+	hstAccount, found := hostdata.GetHostAccountByGroupName(ca.pwdFileName, hstData.Group)
+	if !found {
+		return fmt.Errorf("error: not found account %s", hostName)
+	}
+
+	// Настройка и подключение
+	device, err := netrasp.New(
+		hstData.HostIp,
+		netrasp.WithDriver("ios"),
+		netrasp.WithSSHPort(port),
+		netrasp.WithDialTimeout(time.Duration(dialTimeout)*time.Second),
+		netrasp.WithUsernamePasswordEnableSecret(hstAccount.Username, hstAccount.Password, hstAccount.Secret),
+		netrasp.WithInsecureIgnoreHostKey(),
+	)
+	if err != nil {
+		return fmt.Errorf("unable to init config: %v", err)
+	}
+	defer device.Close(context.Background())
+
+	// Диалог с устройством
+	ctx, cancelOpen := context.WithTimeout(context.Background(), time.Duration(dialTimeout)*time.Second+5*time.Second)
+	defer cancelOpen()
+	if err := device.Dial(ctx); err != nil {
+		return fmt.Errorf("unable to connect: %v", err)
+	}
+
+	// Включение режима enable
+	ctxEnbl, cancelEnable := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelEnable()
+	if err := device.Enable(ctxEnbl); err != nil {
+		//return fmt.Errorf("unable to Enable command: %v", err)
+		fmt.Fprintf(outputWriter, "unable to Enable command: %v", err)
+	}
+
+	// Выполнение команд
+	ctxRun, cancelRun := context.WithTimeout(context.Background(), 180*time.Second)
+	defer cancelRun()
+
+	if len(cmds) > 0 {
+		fmt.Println("--------------------------------------------------")
+		smNum := len(hostName) + 18
+		sm := strings.Repeat(" ", smNum)
+
+		for _, sendCommand := range cmds {
+			sendCommand = strings.TrimLeft(sendCommand, " ")
+			fmt.Println(sm + sendCommand)
+			output, err := device.Run(ctxRun, sendCommand)
+			if err != nil {
+				//fmt.Printf("unable to run command %s: %v\n", sendCommand, err)
+				fmt.Fprintf(outputWriter, "unable to run command %s: %v\n", sendCommand, err)
+				continue
+			}
+			// Вывод результата команды, если она есть.
+			if len(strings.TrimSpace(output)) > 0 {
+				//fmt.Print(output)
+				fmt.Fprint(outputWriter, output)
+			}
+		}
+	}
+
+	// Сохранение конфигурации (если нужно)
+	if flagUseCiscoWrire {
+		fmt.Print("Выполняю сохранение конфигурации на самой cisco...")
+		_, err = device.Run(ctxRun, "wr mem")
+		if err != nil {
+			//fmt.Printf("\nError: unable to run command wr mem: %v\n", err)
+			return fmt.Errorf("unable to save config: %v", err)
+		}
+		fmt.Fprintln(outputWriter, " - Выполнено.")
+	}
+
+	// Выход из сессии
+	ctxExit, cancelExit := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelExit()
+	if _, err := device.Run(ctxExit, "exit"); err != nil {
+		if errors.Is(err, net.ErrClosed) {
+			//fmt.Printf("unable to closed session: %v\n", err)
+			fmt.Fprintf(outputWriter, "unable to closed session: %v\n", err)
 		}
 	}
 
