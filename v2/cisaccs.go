@@ -402,10 +402,11 @@ func (ca *CisAccount) ExecuteSshWithWriter(
 	outputWriter io.Writer,
 ) error {
 	// Приведение имени хоста к нижнему регистру и проверка на пустоту
-	hostName = strings.ToLower(strings.TrimSpace(hostName))
+	hostName = strings.TrimSpace(hostName)
 	if len(hostName) == 0 {
 		return errors.New("host name is empty")
 	}
+	hostName = strings.ToLower(hostName)
 
 	// Проверка порта
 	if port <= 0 || port > 65535 {
@@ -455,31 +456,31 @@ func (ca *CisAccount) ExecuteSshWithWriter(
 	ctxEnbl, cancelEnable := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelEnable()
 	if err := device.Enable(ctxEnbl); err != nil {
-		//return fmt.Errorf("unable to Enable command: %v", err)
 		fmt.Fprintf(outputWriter, "unable to Enable command: %v", err)
 	}
 
-	// Выполнение команд
-	ctxRun, cancelRun := context.WithTimeout(context.Background(), 180*time.Second)
-	defer cancelRun()
-
 	if len(cmds) > 0 {
-		fmt.Println("--------------------------------------------------")
-		smNum := len(hostName) + 18
-		sm := strings.Repeat(" ", smNum)
+		// Создадим контекст таймаута, дабы не ждть вечно выполнения команд
+		ctxRun, cancelRun := context.WithTimeout(context.Background(), 180*time.Second)
+		defer cancelRun()
 
+		//fmt.Println("--------------------------------------------------")
+		//smNum := len(hostName) + 18
+		//sm := strings.Repeat(" ", smNum)
+
+		// Выполнение команд в цикле по одной, ответ сразу идет за командой.
 		for _, sendCommand := range cmds {
-			sendCommand = strings.TrimLeft(sendCommand, " ")
-			fmt.Println(sm + sendCommand)
+			sendCommand = strings.TrimSpace(sendCommand)
+			//fmt.Fprintln(outputWriter, sm+sendCommand)
+			// Сохраним что отправляли
+			fmt.Fprintln(outputWriter, sendCommand)
 			output, err := device.Run(ctxRun, sendCommand)
 			if err != nil {
-				//fmt.Printf("unable to run command %s: %v\n", sendCommand, err)
 				fmt.Fprintf(outputWriter, "unable to run command %s: %v\n", sendCommand, err)
 				continue
 			}
 			// Вывод результата команды, если она есть.
 			if len(strings.TrimSpace(output)) > 0 {
-				//fmt.Print(output)
 				fmt.Fprint(outputWriter, output)
 			}
 		}
@@ -487,13 +488,18 @@ func (ca *CisAccount) ExecuteSshWithWriter(
 
 	// Сохранение конфигурации (если нужно)
 	if flagUseCiscoWrire {
-		fmt.Print("Выполняю сохранение конфигурации на самой cisco...")
-		_, err = device.Run(ctxRun, "wr mem")
+		ctxWrite, cancelWrite := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancelWrite()
+		//fmt.Print("Выполняю сохранение конфигурации на самой cisco...")
+		writeStr := "wr mem"
+		fmt.Fprintln(outputWriter, writeStr)
+		outRun, err := device.Run(ctxWrite, writeStr)
 		if err != nil {
 			//fmt.Printf("\nError: unable to run command wr mem: %v\n", err)
 			return fmt.Errorf("unable to save config: %v", err)
 		}
-		fmt.Fprintln(outputWriter, " - Выполнено.")
+		fmt.Fprintln(outputWriter, outRun)
+		//fmt.Fprintln(outputWriter, " - Выполнено.")
 	}
 
 	// Выход из сессии
