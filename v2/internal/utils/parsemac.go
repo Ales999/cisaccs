@@ -38,22 +38,24 @@ func NewMacLineData(
 func ParseMacLine(line string) MacLineData {
 
 	/*
-	   1    548a.ba01.50b3    DYNAMIC     Gi0/43
-	   1    b022.7a2e.5561    DYNAMIC     Gi0/43
-	   19    805e.c02d.4d50    DYNAMIC     Gi0/43
-	   204    0000.aa8d.ada8    DYNAMIC     Gi0/43
-	   "   1      0e55.6c89.a819   dynamic ip,ipx,assigned,other Port-channel20             "
+	   Old format (Cat4500):
+	   1      0e55.6c89.a819   dynamic ip,ipx,assigned,other Port-channel20
+	   3161      0008.e3ff.fd90    static ip,ipx,assigned,other Switch
+
+	   New format (Cat9k/9500/9410):
+	   594    f433.9234.d502    STATIC      Vl594
+	   583    6c0b.5e0d.a348    DYNAMIC     Po49
 	*/
 
-	re, _ := regexp.Compile(`^\s*(\d+)\s+(\S+)\s+([D|S]\S+)\s{4,6}(\S+)`)
+	re := regexp.MustCompile(`(?i)^\s*(\d+)\s+(\S+)\s+(dynamic)\s+ip\S+\s+(\S+)`)
 	res := re.FindStringSubmatch(line)
-
-	if len(res) > 0 {
+	if len(res) >= 5 {
 		return *NewMacLineData(res[1], res[2], res[4])
 	}
-	re, _ = regexp.Compile(`^\s*(\d+)\s+(\S+)\s+([D|S|d]\S+)\s+ip\S+\s+(\S+)`)
+
+	re = regexp.MustCompile(`(?i)^\s*(\d+)\s+(\S+)\s+(dynamic)\s+(\S+)`)
 	res = re.FindStringSubmatch(line)
-	if len(res) > 0 {
+	if len(res) >= 5 {
 		return *NewMacLineData(res[1], res[2], res[4])
 	}
 
