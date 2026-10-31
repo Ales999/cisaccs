@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ales999/cisaccs/v2/internal/hostdata"
@@ -26,6 +27,7 @@ type CisAccount struct {
 	initated    bool   // Инициализировано через New(...)
 	cisFileName string // Файл с именами хостов, с указанием группы (hosts.yaml)
 	pwdFileName string // Файл с акаунтами и паролями, по группам (groups.yaml)
+	cndMu       sync.Mutex // Синхронизирует доступ к кешу cnd при параллельных подключениях
 	cnd         *namedevs.CiscoNameDevs
 }
 
@@ -87,9 +89,13 @@ func (ca *CisAccount) OneCisExecuteSsh(hostName string, port int, cmds []string,
 
 	var cnd namedevs.CiscoNameDevs
 	// Если имя устройства не совпадает с именем в кеше то запросим ещё раз.
+	// Доступ к кешу cnd защищён mutex — OneCisExecuteSsh может вызываться из
+	// разных goroutines параллельно.
+	ca.cndMu.Lock()
 	if ca.cnd == nil || !strings.EqualFold(ca.cnd.NameDev, hostName) {
 		// Запросим данные о хосте по  его имени
 		hstData, err := cnd.GetHostDataByHostName(ca.cisFileName, hostName)
+		ca.cndMu.Unlock()
 		if err != nil {
 			return outs, err
 		}
@@ -98,16 +104,19 @@ func (ca *CisAccount) OneCisExecuteSsh(hostName string, port int, cmds []string,
 	// Запрос данных для авторизации на хосте по имени группы
 	hstAccount, found := hostdata.GetHostAccountByGroupName(ca.pwdFileName, ca.cnd.Group)
 	if !found {
+		ca.cndMu.Unlock()
 		return outs, fmt.Errorf("error: not found account %s", hostName)
 	}
+	hostIp := ca.cnd.HostIp
+	ca.cndMu.Unlock()
 
 	// Debug print account info
 	if cisDebug {
-		fmt.Printf("!Connect to host: %s (%v)", hostName, ca.cnd.HostIp)
+		fmt.Printf("!Connect to host: %s (%v)", hostName, hostIp)
 	}
 
 	// Настройка и подключение.
-	device, err := netrasp.New(ca.cnd.HostIp,
+	device, err := netrasp.New(hostIp,
 		netrasp.WithDriver("ios"),
 		netrasp.WithSSHPort(port),
 		netrasp.WithDialTimeout(time.Duration(dialTimeout)*time.Second),
