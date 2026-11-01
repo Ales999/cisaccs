@@ -8,7 +8,6 @@ import (
 )
 
 var generalPrompt = regexp.MustCompile(`(^[a-zA-Z0-9_-]+[#|>])|(^[a-zA-Z0-9_-]+\([a-z-]+\)#)`)
-var enablePrompt = regexp.MustCompile(`^[Pp]assword:`)
 
 // Ios is the Netrasp driver for Cisco IOS.
 type ios struct {
@@ -63,18 +62,8 @@ func (i ios) Dial(ctx context.Context) error {
 
 // Enable elevates privileges.
 func (i ios) Enable(ctx context.Context) error {
-	_, err := i.RunUntil(ctx, "enable", enablePrompt)
-	if err != nil {
-		return err
-	}
 	host := i.Connection.GetHost()
-	_, err = i.Run(ctx, host.enableSecret)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return enablePrivileges(ctx, i.Connection, host.enableSecret)
 }
 
 // Run executes a command on a device.

@@ -66,18 +66,8 @@ func (i sg3xx) Dial(ctx context.Context) error {
 
 // Enable elevates privileges.
 func (i sg3xx) Enable(ctx context.Context) error {
-	_, err := i.RunUntil(ctx, "enable", enablePrompt)
-	if err != nil {
-		return err
-	}
 	host := i.Connection.GetHost()
-	_, err = i.Run(ctx, host.enableSecret)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return enablePrivileges(ctx, i.Connection, host.enableSecret)
 }
 
 // Run executes a command on a device.
