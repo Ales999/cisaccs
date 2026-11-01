@@ -12,11 +12,17 @@ type MacLineData struct {
 
 // macReWithProto ловит старый формат Cat4500: "1    mac    dynamic ip,ipx,... Port-channel20"
 // macReSimple ловит новый формат (Cat9k/9500/9410): "594    mac    DYNAMIC     Po49"
-// Оба паттерна требуют DYNAMIC (case-insensitive) — STATIC-записи (SVI-gateway) игнорируются.
+// Ловим и DYNAMIC, и STATIC (case-insensitive). На C9200L хосты часто сидят на
+// access-портах как STATIC — их нужно отслеживать. А вот STATIC на интерфейсе
+// VLAN (VlXXX) это SVI-gateway (системный MAC), он отфильтрован в ParseMacLine.
 var (
-	macReWithProto = regexp.MustCompile(`(?i)^\s*(\d+)\s+(\S+)\s+(dynamic)\s+ip\S+\s+(\S+)`)
-	macReSimple    = regexp.MustCompile(`(?i)^\s*(\d+)\s+(\S+)\s+(dynamic)\s+(\S+)`)
+	macReWithProto = regexp.MustCompile(`(?i)^\s*(\d+)\s+(\S+)\s+(dynamic|static)\s+ip\S+\s+(\S+)`)
+	macReSimple    = regexp.MustCompile(`(?i)^\s*(\d+)\s+(\S+)\s+(dynamic|static)\s+(\S+)`)
 )
+
+// reVlanIface ловит интерфейсы SVI/ВLAN в выводе mac-table («Vl40», «Vlan40»).
+// Это шлюзы VLAN (системные MAC), а не конечные хосты, поэтому они не отслеживаются.
+var reVlanIface = regexp.MustCompile(`(?i)^vl(an)?\d`)
 
 type HostMacLineData struct {
 	HostName string
@@ -55,14 +61,19 @@ func ParseMacLine(line string) MacLineData {
 	   583    6c0b.5e0d.a348    DYNAMIC     Po49
 	*/
 
+	var mld MacLineData
 	if res := macReWithProto.FindStringSubmatch(line); len(res) >= 5 {
-		return *NewMacLineData(res[1], res[2], res[4])
-	}
-	if res := macReSimple.FindStringSubmatch(line); len(res) >= 5 {
-		return *NewMacLineData(res[1], res[2], res[4])
+		mld = *NewMacLineData(res[1], res[2], res[4])
+	} else if res := macReSimple.FindStringSubmatch(line); len(res) >= 5 {
+		mld = *NewMacLineData(res[1], res[2], res[4])
 	}
 
-	return MacLineData{}
+	// MAC на интерфейсе VLAN (SVI-gateway) — не конечная точка, не отслеживаем.
+	if mld.GetLen() > 0 && reVlanIface.MatchString(mld.GetIface()) {
+		return MacLineData{}
+	}
+
+	return mld
 
 }
 
