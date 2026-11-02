@@ -15,6 +15,8 @@ type MacLineData struct {
 // Ловим и DYNAMIC, и STATIC (case-insensitive). На C9200L хосты часто сидят на
 // access-портах как STATIC — их нужно отслеживать. А вот STATIC на интерфейсе
 // VLAN (VlXXX) это SVI-gateway (системный MAC), он отфильтрован в ParseMacLine.
+// Аналогично отфильтрованы STATIC/DYNAMIC на порту Switch/Local — это сам
+// коммутатор (на Cat4500 SVI-шлюз виден как «... Switch»), а не хост.
 var (
 	macReWithProto = regexp.MustCompile(`(?i)^\s*(\d+)\s+(\S+)\s+(dynamic|static)\s+ip\S+\s+(\S+)`)
 	macReSimple    = regexp.MustCompile(`(?i)^\s*(\d+)\s+(\S+)\s+(dynamic|static)\s+(\S+)`)
@@ -23,6 +25,13 @@ var (
 // reVlanIface ловит интерфейсы SVI/ВLAN в выводе mac-table («Vl40», «Vlan40»).
 // Это шлюзы VLAN (системные MAC), а не конечные хосты, поэтому они не отслеживаются.
 var reVlanIface = regexp.MustCompile(`(?i)^vl(an)?\d`)
+
+// reLocalIface ловит локальные (системные) MAC-адреса самого коммутатора — в
+// выводе mac-table их порт равен «Switch» (IOS/Cat4500) или «Local». Это SVI-
+// шлюз / базовый MAC самого коммутатора, а не конечный хост, поэтому они не
+// отслеживаются (иначе «пустые» SVI никогда не пометятся пустыми: свой MAC SVI
+// видит всегда, даже без клиентов).
+var reLocalIface = regexp.MustCompile(`(?i)^(switch|local)$`)
 
 type HostMacLineData struct {
 	HostName string
@@ -70,6 +79,12 @@ func ParseMacLine(line string) MacLineData {
 
 	// MAC на интерфейсе VLAN (SVI-gateway) — не конечная точка, не отслеживаем.
 	if mld.GetLen() > 0 && reVlanIface.MatchString(mld.GetIface()) {
+		return MacLineData{}
+	}
+
+	// MAC на локальном порту (Switch/Local) — системный MAC самого коммутатора
+	// (SVI-шлюз на Cat4500 и т.п.), не конечная точка, не отслеиваем.
+	if mld.GetLen() > 0 && reLocalIface.MatchString(mld.GetIface()) {
 		return MacLineData{}
 	}
 

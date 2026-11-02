@@ -38,6 +38,16 @@ func TestParseMacLine(t *testing.T) {
 			args: args{line: " 40    c4ab.4dff.39f0    STATIC      Vlan40"},
 			want: MacLineData{},
 		},
+		{
+			name: "Static-on-Switch-port-is-local-MAC-ignored-Cat4500",
+			args: args{line: " 24      0008.e3ff.fc44    static ip,ipx,assigned,other Switch"},
+			want: MacLineData{},
+		},
+		{
+			name: "Static-on-Local-port-is-local-MAC-ignored",
+			args: args{line: " 24      0008.e3ff.fc44    static ip,ipx,assigned,other Local"},
+			want: MacLineData{},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
