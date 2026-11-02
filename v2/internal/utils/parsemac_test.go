@@ -44,8 +44,33 @@ func TestParseMacLine(t *testing.T) {
 			want: MacLineData{},
 		},
 		{
-			name: "Static-on-Local-port-is-local-MAC-ignored",
+			name: "Static-on-VLAN-long-name-is-SVI-gateway-ignored",
+			args: args{line: " 40    c4ab.4dff.39f0    STATIC      Vlan40"},
+			want: MacLineData{},
+		},
+		{
+			name: "Switch-port-is-local-MAC-ignored",
+			args: args{line: " 24      0008.e3ff.fc44    static ip,ipx,assigned,other Switch"},
+			want: MacLineData{},
+		},
+		{
+			name: "Local-port-is-local-MAC-ignored",
 			args: args{line: " 24      0008.e3ff.fc44    static ip,ipx,assigned,other Local"},
+			want: MacLineData{},
+		},
+		{
+			name: "CPU-port-is-local-MAC-ignored",
+			args: args{line: " 24      0008.e3ff.fc44    static ip,ipx,assigned,other CPU"},
+			want: MacLineData{},
+		},
+		{
+			name: "PortChannel-name-in-first-column-has-emptyVlan",
+			args: args{line: "Po29      c4ab.4dff.39e7   dynamic ip,ipx,assigned,other Port-channel29"},
+			want: MacLineData{vlan: "", mac: "c4ab.4dff.39e7", iface: "Port-channel29"},
+		},
+		{
+			name: "MulticastSystemTypeIsIgnored",
+			args: args{line: "   1      ffff.ffff.ffff   system Te1/1/16,Te1/1/19"},
 			want: MacLineData{},
 		},
 	}

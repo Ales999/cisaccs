@@ -2,6 +2,7 @@ package utils
 
 import (
 	"regexp"
+	"strconv"
 )
 
 type MacLineData struct {
@@ -10,16 +11,21 @@ type MacLineData struct {
 	iface string
 }
 
-// macReWithProto ловит старый формат Cat4500: "1    mac    dynamic ip,ipx,... Port-channel20"
-// macReSimple ловит новый формат (Cat9k/9500/9410): "594    mac    DYNAMIC     Po49"
-// Ловим и DYNAMIC, и STATIC (case-insensitive). На C9200L хосты часто сидят на
+// macReWithProto ловит формат со протоками: «814  mac  dynamic ip,ipx,... Port-channel20».
+// macReSimple ловит формат без протоков: «594  mac  DYNAMIC  Po49».
+// Первый столбец — это VLAN (цифры), но на Cat4500 в нём может быть имя
+// port-channel (напр. «Po29»), поэтому ловим любой токен и проверяем, что это
+// номер VLAN (см. ниже).
+// Ловим и DYNAMIC, и STATIC (case-insensitive). На C9200L хосты сидят на
 // access-портах как STATIC — их нужно отслеживать. А вот STATIC на интерфейсе
 // VLAN (VlXXX) это SVI-gateway (системный MAC), он отфильтрован в ParseMacLine.
-// Аналогично отфильтрованы STATIC/DYNAMIC на порту Switch/Local — это сам
+// Аналогично отфильтрованы STATIC/DYNAMIC на порту Switch/Local/CPU — это сам
 // коммутатор (на Cat4500 SVI-шлюз виден как «... Switch»), а не хост.
+// Тип system (мультикаст/системные, напр. 0100.0ccc.ccce, ffff.ffff.ffff) не
+// ловится вообще — нам нужны только конечные хосты.
 var (
-	macReWithProto = regexp.MustCompile(`(?i)^\s*(\d+)\s+(\S+)\s+(dynamic|static)\s+ip\S+\s+(\S+)`)
-	macReSimple    = regexp.MustCompile(`(?i)^\s*(\d+)\s+(\S+)\s+(dynamic|static)\s+(\S+)`)
+	macReWithProto = regexp.MustCompile(`(?i)^\s*(\S+)\s+(\S+)\s+(dynamic|static)\s+ip\S+\s+(\S+)`)
+	macReSimple    = regexp.MustCompile(`(?i)^\s*(\S+)\s+(\S+)\s+(dynamic|static)\s+(\S+)`)
 )
 
 // reVlanIface ловит интерфейсы SVI/ВLAN в выводе mac-table («Vl40», «Vlan40»).
@@ -27,11 +33,10 @@ var (
 var reVlanIface = regexp.MustCompile(`(?i)^vl(an)?\d`)
 
 // reLocalIface ловит локальные (системные) MAC-адреса самого коммутатора — в
-// выводе mac-table их порт равен «Switch» (IOS/Cat4500) или «Local». Это SVI-
-// шлюз / базовый MAC самого коммутатора, а не конечный хост, поэтому они не
-// отслеживаются (иначе «пустые» SVI никогда не пометятся пустыми: свой MAC SVI
-// видит всегда, даже без клиентов).
-var reLocalIface = regexp.MustCompile(`(?i)^(switch|local)$`)
+// выводе mac-table их порт равен «Switch» (IOS/Cat4500), «Local» или «CPU». Это
+// SVI-шлюз / базовый MAC самого коммутатора, а не конечный хост, поэтому они не
+// отслеживаются (иначе «пустые» SVI никогда не пометятся пустыми).
+var reLocalIface = regexp.MustCompile(`(?i)^(switch|local|cpu)$`)
 
 type HostMacLineData struct {
 	HostName string
@@ -63,6 +68,7 @@ func ParseMacLine(line string) MacLineData {
 	/*
 	   Old format (Cat4500):
 	   1      0e55.6c89.a819   dynamic ip,ipx,assigned,other Port-channel20
+	   Po29   c4ab.4dff.39e7   dynamic ip,ipx,assigned,other Port-channel29  <- VLAN в 1-м столбце = имя port-channel
 	   3161      0008.e3ff.fd90    static ip,ipx,assigned,other Switch
 
 	   New format (Cat9k/9500/9410):
@@ -77,12 +83,22 @@ func ParseMacLine(line string) MacLineData {
 		mld = *NewMacLineData(res[1], res[2], res[4])
 	}
 
-	// MAC на интерфейсе VLAN (SVI-gateway) — не конечная точка, не отслеживаем.
+	// Первый столбец — VLAN, но на Cat4500 в нём может быть имя port-channel
+	// (напр. «Po29»), а не номер VLAN. Если это не число — VLAN неизвестен,
+	// оставляем пустым: VLAN участвует только в детекции пустых SVI, а порт
+	// (Port-channel29) остаётся для классификации линк-MAC.
+	if mld.GetLen() > 0 {
+		if _, err := strconv.Atoi(mld.vlan); err != nil {
+			mld.vlan = ""
+		}
+	}
+
+	// MAC на интерфейсе VLAN (SVI-gateway) — не конечная точка, не отслеиваем.
 	if mld.GetLen() > 0 && reVlanIface.MatchString(mld.GetIface()) {
 		return MacLineData{}
 	}
 
-	// MAC на локальном порту (Switch/Local) — системный MAC самого коммутатора
+	// MAC на локальном порту (Switch/Local/CPU) — системный MAC самого коммутатора
 	// (SVI-шлюз на Cat4500 и т.п.), не конечная точка, не отслеиваем.
 	if mld.GetLen() > 0 && reLocalIface.MatchString(mld.GetIface()) {
 		return MacLineData{}
